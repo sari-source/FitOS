@@ -1,29 +1,23 @@
-import { useReducer } from 'react';
+import { useReducer, useRef, useEffect } from 'react';
 import { storage } from '../utils/storage';
 
 const SNAPSHOT_KEY = 'fitos_plan_history';
-const INITIAL_SNAPSHOT_KEY = 'fitos_initial_snapshot';
+const BASELINE_KEY = 'fitos_baseline';
 
-function getInitialSnapshot() {
-  const stored = localStorage.getItem(INITIAL_SNAPSHOT_KEY);
+function loadBaseline() {
+  const stored = localStorage.getItem(BASELINE_KEY);
   if (stored) return JSON.parse(stored);
   
   const profile = storage.get(storage.getKeys().PROFILE);
   const macros = storage.get(storage.getKeys().MACROS);
   const plan = storage.get(storage.getKeys().PLAN) || {};
   
-  if (!profile && !macros && Object.keys(plan).length === 0) return null;
-  
-  const snap = {
-    plan: JSON.parse(JSON.stringify(plan)),
-    macros: macros ? JSON.parse(JSON.stringify(macros)) : null,
-    date: '2025-01-01',
-  };
-  localStorage.setItem(INITIAL_SNAPSHOT_KEY, JSON.stringify(snap));
+  const snap = { plan: JSON.parse(JSON.stringify(plan)), macros: macros ? JSON.parse(JSON.stringify(macros)) : null };
+  localStorage.setItem(BASELINE_KEY, JSON.stringify(snap));
   return snap;
 }
 
-const initialSnapshot = getInitialSnapshot();
+const baseline = loadBaseline();
 const rawHistory = storage.get(SNAPSHOT_KEY);
 const initialPlanHistory = Array.isArray(rawHistory) ? rawHistory : [];
 
@@ -34,7 +28,7 @@ const initialState = {
   logs: storage.get(storage.getKeys().LOGS) || {},
   meals: storage.get(storage.getKeys().MEALS) || {},
   planHistory: initialPlanHistory,
-  initialSnapshot,
+  baseline,
   calMonth: new Date(),
   isPopupOpen: false,
 };
@@ -81,6 +75,11 @@ function appReducer(state, action) {
       storage.set(storage.getKeys().PROFILE, action.payload);
       return { ...state, profile: action.payload, planHistory: updatedHistory };
     }
+    case 'SET_BASELINE': {
+      const snap = { plan: JSON.parse(JSON.stringify(action.payload.plan)), macros: action.payload.macros ? JSON.parse(JSON.stringify(action.payload.macros)) : null };
+      localStorage.setItem(BASELINE_KEY, JSON.stringify(snap));
+      return { ...state, baseline: snap };
+    }
     case 'LOG_SET': {
       const { date, entry } = action.payload;
       const updatedLogs = { ...state.logs };
@@ -106,5 +105,15 @@ function appReducer(state, action) {
 
 export function useAppState() {
   const [state, dispatch] = useReducer(appReducer, initialState);
+  const initialized = useRef(false);
+
+  useEffect(() => {
+    if (initialized.current) return;
+    initialized.current = true;
+    if (!state.baseline) {
+      dispatch({ type: 'SET_BASELINE', payload: { plan: state.plan, macros: state.macros } });
+    }
+  }, [state.baseline, state.plan, state.macros, dispatch]);
+
   return { state, dispatch };
 }

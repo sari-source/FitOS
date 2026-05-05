@@ -46,11 +46,12 @@ export default function CalendarTab({ state, dispatch }) {
       let hasPlan = false;
       if (isPastDate) {
         const allSnaps = [...(state.planHistory || [])];
-        if (state.initialSnapshot) allSnaps.unshift(state.initialSnapshot);
         const relevant = allSnaps.filter(s => s.date <= dateStr);
         if (relevant.length > 0) {
           const snap = relevant[relevant.length - 1];
           hasPlan = snap.plan[dayName] && !snap.plan[dayName].rest;
+        } else if (state.baseline) {
+          hasPlan = state.baseline.plan[dayName] && !state.baseline.plan[dayName]?.rest;
         }
       } else {
         hasPlan = state.plan[dayName] && !state.plan[dayName].rest;
@@ -107,7 +108,7 @@ export default function CalendarTab({ state, dispatch }) {
           meals={state.meals} 
           macros={state.macros}
           planHistory={state.planHistory}
-          initialSnapshot={state.initialSnapshot}
+          baseline={state.baseline}
         />
       )}
       

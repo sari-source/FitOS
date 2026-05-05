@@ -3,25 +3,28 @@ import MacroBar from './MacroBar';
 import { formatDate } from '../../utils/dateUtils';
 import { useMacros } from '../../hooks/useMacros';
 
-export default function DaySheet({ date, plan, logs, meals, macros, planHistory, initialSnapshot }) {
+export default function DaySheet({ date, plan, logs, meals, macros, planHistory, baseline }) {
   const dateStr = formatDate(date);
   const { totals } = useMacros(meals, macros, date);
   
   const todayStr = formatDate(new Date());
   const isPast = dateStr < todayStr;
   
-  const getBaseline = (targetDate) => {
-    const allSnapshots = [...(planHistory || [])];
-    if (initialSnapshot) allSnapshots.unshift(initialSnapshot);
+  const getEffectiveState = () => {
+    if (!isPast) return { effectivePlan: plan, effectiveMacros: macros };
     
-    const relevant = allSnapshots.filter(s => s.date <= targetDate);
-    if (relevant.length === 0) return null;
-    return relevant[relevant.length - 1];
+    const allSnaps = [...(planHistory || [])];
+    const relevant = allSnaps.filter(s => s.date <= dateStr);
+    
+    if (relevant.length > 0) {
+      const snap = relevant[relevant.length - 1];
+      return { effectivePlan: snap.plan, effectiveMacros: snap.macros };
+    }
+    
+    return { effectivePlan: baseline?.plan || plan, effectiveMacros: baseline?.macros || macros };
   };
   
-  const baseline = getBaseline(dateStr);
-  const effectivePlan = isPast && baseline ? baseline.plan : plan;
-  const effectiveMacros = isPast && baseline && baseline.macros ? baseline.macros : macros;
+  const { effectivePlan, effectiveMacros } = getEffectiveState();
   const { totals: effectiveTotals } = useMacros(meals, effectiveMacros, date);
   
   const dayPlan = effectivePlan[new Date(date).toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase()];
