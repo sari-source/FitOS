@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { formatDate } from '../../utils/dateUtils';
 import { useMacros } from '../../hooks/useMacros';
 import MacroBar from '../shared/MacroBar';

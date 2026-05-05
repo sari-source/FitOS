@@ -2,8 +2,9 @@ import { useMemo } from 'react';
 import { formatDate } from '../utils/dateUtils';
 
 export function useMacros(meals, macros, date) {
+  const dateStr = useMemo(() => formatDate(date), [date]);
+  
   return useMemo(() => {
-    const dateStr = formatDate(date);
     const dayMeals = meals[dateStr] || [];
     
     const totals = dayMeals.reduce((acc, meal) => {
@@ -14,15 +15,6 @@ export function useMacros(meals, macros, date) {
       return acc;
     }, { calories: 0, protein: 0, carbs: 0, fat: 0 });
 
-    return {
-      totals,
-      targets: macros,
-      percentages: macros ? {
-        calories: (totals.calories / macros.calories) * 100,
-        protein: (totals.protein / macros.protein) * 100,
-        carbs: (totals.carbs / macros.carbs) * 100,
-        fat: (totals.fat / macros.fat) * 100,
-      } : null,
-    };
-  }, [meals, macros, date]);
+    return { totals, targets: macros };
+  }, [meals, dateStr, macros]);
 }

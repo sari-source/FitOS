@@ -1,5 +1,3 @@
-import React from 'react';
-
 export default function ExerciseRow({ exercise, sets }) {
   return (
     <div className="flex items-center justify-between p-4 bg-zinc-900 border-l-4 border-accent rounded-r-xl shadow-lg group hover:bg-zinc-800 transition-colors">

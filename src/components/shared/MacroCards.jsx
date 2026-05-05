@@ -1,5 +1,3 @@
-import React from 'react';
-
 const LABELS = {
   calories: 'TOTAL ENERGY',
   protein: 'PROTEIN',

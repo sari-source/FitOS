@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { getDaysInMonth, getFirstDayOfMonth, formatDate } from '../../utils/dateUtils';
 import DaySheet from '../shared/DaySheet';
 

@@ -1,13 +1,10 @@
-import React from 'react';
 import MacroBar from './MacroBar';
 import { formatDate } from '../../utils/dateUtils';
 import { useMacros } from '../../hooks/useMacros';
 
 export default function DaySheet({ date, plan, logs, meals, macros, planHistory, baseline }) {
-  const dateStr = formatDate(date);
-  const { totals } = useMacros(meals, macros, date);
-  
   const todayStr = formatDate(new Date());
+  const dateStr = formatDate(date);
   const isPast = dateStr < todayStr;
   
   const getEffectiveState = () => {

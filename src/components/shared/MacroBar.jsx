@@ -32,11 +32,11 @@ export default function MacroBar({ type, current, target }) {
       </div>
       <div className="w-full bg-zinc-800 rounded-none h-1.5 overflow-hidden relative">
         <div 
-          className="h-full transition-all duration-700 ease-out" 
+          className="h-full macro-bar-fill" 
           style={{ 
             width: `${percentage}%`, 
             backgroundColor: COLORS[type],
-            boxShadow: `0 0 8px ${COLORS[type]}`
+            '--glow-color': COLORS[type],
           }}
         ></div>
       </div>

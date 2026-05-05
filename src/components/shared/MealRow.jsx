@@ -1,5 +1,3 @@
-import React from 'react';
-
 export default function MealRow({ meal }) {
   return (
     <div className="flex items-center justify-between p-4 bg-zinc-900 border border-white/5 rounded-2xl group hover:border-accent/30 transition-all">

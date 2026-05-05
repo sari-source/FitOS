@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { formatDate, getDayName } from '../../utils/dateUtils';
 
 export default function LogTab({ state, dispatch }) {
