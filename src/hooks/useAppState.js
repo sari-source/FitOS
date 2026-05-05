@@ -8,11 +8,9 @@ function loadBaseline() {
   const stored = localStorage.getItem(BASELINE_KEY);
   if (stored) return JSON.parse(stored);
   
-  const profile = storage.get(storage.getKeys().PROFILE);
   const macros = storage.get(storage.getKeys().MACROS);
-  const plan = storage.get(storage.getKeys().PLAN) || {};
   
-  const snap = { plan: JSON.parse(JSON.stringify(plan)), macros: macros ? JSON.parse(JSON.stringify(macros)) : null };
+  const snap = { plan: {}, macros: macros ? JSON.parse(JSON.stringify(macros)) : null };
   localStorage.setItem(BASELINE_KEY, JSON.stringify(snap));
   return snap;
 }

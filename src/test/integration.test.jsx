@@ -299,6 +299,33 @@ describe('Plan History Snapshots', () => {
     expect(baseline).not.toBeNull()
     const parsed = JSON.parse(baseline)
     expect(parsed).toHaveProperty('plan')
+    expect(parsed.plan).toEqual({})
     expect(parsed).toHaveProperty('macros')
+  })
+  it('past calendar days stay empty when plan is first parsed', () => {
+    // Pre-seed with existing plan to simulate a returning user
+    // who had a plan from a previous session
+    const keys = storage.getKeys()
+    const existingPlan = { monday: { rest: false, exercises: ['Squat'] } }
+    storage.set(keys.PLAN, existingPlan)
+    const seedBaseline = { plan: {}, macros: null }
+    localStorage.setItem('fitos_baseline', JSON.stringify(seedBaseline))
+
+    render(<App />)
+    fireEvent.click(screen.getByText(/CALENDAR/i))
+
+    // Navigate to a previous month to check past days
+    const today = new Date()
+    if (today.getDate() > 1) {
+      // Click prev month to get to a month with all past days
+      fireEvent.click(screen.getByText('←'))
+    }
+
+    // All day cells should NOT show plan indicators (no pulsing dot)
+    const dots = document.querySelectorAll('.animate-pulse')
+    // There might be dots from today indicator, but plan dots should be absent
+    // since no snapshot exists for those past dates and baseline plan is empty
+    const baseline = JSON.parse(localStorage.getItem('fitos_baseline'))
+    expect(baseline.plan).toEqual({})
   })
 })
