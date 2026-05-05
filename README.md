@@ -37,3 +37,4 @@ Your personal fitness command center. Track workouts, log nutrition, and stay on
 - Tailwind CSS
 - LocalStorage persistence
 "# FitOS" 
+"# FitOS" 
