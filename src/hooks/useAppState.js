@@ -1,0 +1,110 @@
+import { useReducer } from 'react';
+import { storage } from '../utils/storage';
+
+const SNAPSHOT_KEY = 'fitos_plan_history';
+const INITIAL_SNAPSHOT_KEY = 'fitos_initial_snapshot';
+
+function getInitialSnapshot() {
+  const stored = localStorage.getItem(INITIAL_SNAPSHOT_KEY);
+  if (stored) return JSON.parse(stored);
+  
+  const profile = storage.get(storage.getKeys().PROFILE);
+  const macros = storage.get(storage.getKeys().MACROS);
+  const plan = storage.get(storage.getKeys().PLAN) || {};
+  
+  if (!profile && !macros && Object.keys(plan).length === 0) return null;
+  
+  const snap = {
+    plan: JSON.parse(JSON.stringify(plan)),
+    macros: macros ? JSON.parse(JSON.stringify(macros)) : null,
+    date: '2025-01-01',
+  };
+  localStorage.setItem(INITIAL_SNAPSHOT_KEY, JSON.stringify(snap));
+  return snap;
+}
+
+const initialSnapshot = getInitialSnapshot();
+const rawHistory = storage.get(SNAPSHOT_KEY);
+const initialPlanHistory = Array.isArray(rawHistory) ? rawHistory : [];
+
+const initialState = {
+  profile: storage.get(storage.getKeys().PROFILE),
+  macros: storage.get(storage.getKeys().MACROS),
+  plan: storage.get(storage.getKeys().PLAN) || {},
+  logs: storage.get(storage.getKeys().LOGS) || {},
+  meals: storage.get(storage.getKeys().MEALS) || {},
+  planHistory: initialPlanHistory,
+  initialSnapshot,
+  calMonth: new Date(),
+  isPopupOpen: false,
+};
+
+function appReducer(state, action) {
+  const todayStr = new Date().toISOString().split('T')[0];
+
+  const pushSnapshot = (currentState) => {
+    const snap = { plan: JSON.parse(JSON.stringify(currentState.plan)), macros: currentState.macros ? JSON.parse(JSON.stringify(currentState.macros)) : null, date: todayStr };
+    const updated = [...(currentState.planHistory || []), snap];
+    storage.set(SNAPSHOT_KEY, updated);
+    return updated;
+  };
+
+  switch (action.type) {
+    case 'SET_POPUP_STATE':
+      return { ...state, isPopupOpen: action.payload };
+    case 'SET_PLAN': {
+      const updatedHistory = pushSnapshot(state);
+      storage.set(storage.getKeys().PLAN, action.payload);
+      return { ...state, plan: action.payload, planHistory: updatedHistory };
+    }
+    case 'UPDATE_PLAN_DAY': {
+      const updatedHistory = pushSnapshot(state);
+      const { day, data } = action.payload;
+      const updatedPlan = { ...state.plan, [day]: data };
+      storage.set(storage.getKeys().PLAN, updatedPlan);
+      return { ...state, plan: updatedPlan, planHistory: updatedHistory };
+    }
+    case 'DELETE_PLAN_DAY': {
+      const updatedHistory = pushSnapshot(state);
+      const updatedPlan = { ...state.plan };
+      delete updatedPlan[action.payload];
+      storage.set(storage.getKeys().PLAN, updatedPlan);
+      return { ...state, plan: updatedPlan, planHistory: updatedHistory };
+    }
+    case 'SET_MACROS': {
+      const updatedHistory = pushSnapshot(state);
+      storage.set(storage.getKeys().MACROS, action.payload);
+      return { ...state, macros: action.payload, planHistory: updatedHistory };
+    }
+    case 'SET_PROFILE': {
+      const updatedHistory = pushSnapshot(state);
+      storage.set(storage.getKeys().PROFILE, action.payload);
+      return { ...state, profile: action.payload, planHistory: updatedHistory };
+    }
+    case 'LOG_SET': {
+      const { date, entry } = action.payload;
+      const updatedLogs = { ...state.logs };
+      if (!updatedLogs[date]) updatedLogs[date] = [];
+      updatedLogs[date] = [...(updatedLogs[date] || []), entry];
+      storage.set(storage.getKeys().LOGS, updatedLogs);
+      return { ...state, logs: updatedLogs };
+    }
+    case 'LOG_MEAL': {
+      const { mealDate, meal } = action.payload;
+      const updatedMeals = { ...state.meals };
+      if (!updatedMeals[mealDate]) updatedMeals[mealDate] = [];
+      updatedMeals[mealDate] = [...(updatedMeals[mealDate] || []), meal];
+      storage.set(storage.getKeys().MEALS, updatedMeals);
+      return { ...state, meals: updatedMeals };
+    }
+    case 'SET_CAL_MONTH':
+      return { ...state, calMonth: action.payload };
+    default:
+      return state;
+  }
+}
+
+export function useAppState() {
+  const [state, dispatch] = useReducer(appReducer, initialState);
+  return { state, dispatch };
+}
