@@ -197,17 +197,7 @@ export default function NutritionTab({ state, dispatch }) {
               </div>
 
                {!manualEntry && (
-                <div className="space-y-4 animate-fade-in">
-                  <div>
-                    <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Context Notes</label>
-                    <input 
-                      className="w-full p-4 bg-zinc-800 text-white border border-zinc-700 rounded-none outline-none text-mono text-sm focus:border-accent transition-colors"
-                      value={notes}
-                      onChange={e => setNotes(e.target.value)}
-                      placeholder="e.g. Grilled with olive oil, extra rice, sauce on the side"
-                    />
-                  </div>
-
+                 <div className="space-y-4 animate-fade-in">
                   <div className="relative w-full h-64 bg-zinc-800 rounded-2xl overflow-hidden border-2 border-dashed border-zinc-700 flex items-center justify-center group">
                     {photo ? (
                       <>
@@ -257,6 +247,16 @@ export default function NutritionTab({ state, dispatch }) {
                         <div className="text-mono text-[10px] uppercase">Scanning nutrition profile</div>
                       </div>
                     )}
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Context Notes</label>
+                    <input 
+                      className="w-full p-4 bg-zinc-800 text-white border border-zinc-700 rounded-none outline-none text-mono text-sm focus:border-accent transition-colors"
+                      value={notes}
+                      onChange={e => setNotes(e.target.value)}
+                      placeholder="e.g. Grilled with olive oil, extra rice, sauce on the side"
+                    />
                   </div>
 
                   <button
