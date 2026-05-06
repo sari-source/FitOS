@@ -17,6 +17,7 @@ export default function NutritionTab({ state, dispatch }) {
   const [hasAnalyzed, setHasAnalyzed] = useState(false);
   const [showPhotoOptions, setShowPhotoOptions] = useState(false);
   const [manualEntry, setManualEntry] = useState(false);
+  const [notes, setNotes] = useState('');
 
   useEffect(() => {
     dispatch({ type: 'SET_POPUP_STATE', payload: isFormOpen });
@@ -30,12 +31,13 @@ export default function NutritionTab({ state, dispatch }) {
     reader.onload = async (event) => {
       const base64Image = event.target.result;
       setPhoto(base64Image);
-      await analyzePhoto(base64Image);
+      setHasAnalyzed(false);
+      await analyzePhoto(base64Image, notes);
     };
     reader.readAsDataURL(file);
   };
 
-  const analyzePhoto = async (base64Image) => {
+  const analyzePhoto = async (base64Image, photoNotes = '') => {
     setIsAnalyzing(true);
     setHasAnalyzed(false);
     try {
@@ -46,7 +48,7 @@ export default function NutritionTab({ state, dispatch }) {
           contents: [
             {
               parts: [
-                { text: 'Analyze this food photo and estimate the macros. Return ONLY a JSON object with keys: calories (number), protein (number in grams), carbs (number in grams), fat (number in grams). No extra text, no markdown fences.' },
+                { text: `Analyze this food photo and estimate the macros. Return ONLY a JSON object with keys: calories (number), protein (number in grams), carbs (number in grams), fat (number in grams). No extra text, no markdown fences.${photoNotes ? `\n\nUser notes about the meal: ${photoNotes}. Use this context to improve your estimate.` : ''}` },
                 { 
                   inline_data: { 
                     mime_type: 'image/jpeg', 
@@ -115,6 +117,7 @@ export default function NutritionTab({ state, dispatch }) {
     setMealName('');
     setMacros({ calories: '', protein: '', carbs: '', fat: '' });
     setPhoto(null);
+    setNotes('');
     setHasAnalyzed(false);
     setManualEntry(false);
     setIsFormOpen(false);
@@ -196,6 +199,7 @@ export default function NutritionTab({ state, dispatch }) {
               </div>
 
                {!manualEntry && (
+                <>
                 <div className="relative w-full h-64 bg-zinc-800 rounded-2xl overflow-hidden border-2 border-dashed border-zinc-700 flex items-center justify-center group">
                   {photo ? (
                     <>
@@ -246,6 +250,36 @@ export default function NutritionTab({ state, dispatch }) {
                     </div>
                   )}
                 </div>
+                
+                {photo && (
+                  <div className="mt-3 space-y-2 animate-fade-in">
+                    <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">Context Notes</label>
+                    <input 
+                      className="w-full p-3 bg-zinc-800 text-white border border-zinc-700 rounded-none outline-none text-mono text-xs focus:border-accent transition-colors"
+                      value={notes}
+                      onChange={e => setNotes(e.target.value)}
+                      placeholder="e.g. Grilled with olive oil, extra rice, sauce on the side"
+                    />
+                    {!hasAnalyzed ? (
+                      <button
+                        type="button"
+                        onClick={() => analyzePhoto(photo, notes)}
+                        className="w-full py-3 bg-accent text-black font-bold text-mono text-xs uppercase tracking-widest hover:bg-white transition-colors"
+                      >
+                        Analyze Photo
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => { setHasAnalyzed(false); analyzePhoto(photo, notes); }}
+                        className="w-full py-3 bg-zinc-700 text-white font-bold text-mono text-xs uppercase tracking-widest hover:bg-accent hover:text-black transition-colors"
+                      >
+                        Rescan with Notes
+                      </button>
+                    )}
+                  </div>
+                )}
+               </>
                )}
 
                {hasAnalyzed && !manualEntry && (
