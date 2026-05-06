@@ -46,7 +46,7 @@ export default function NutritionTab({ state, dispatch }) {
           contents: [
             {
               parts: [
-                { text: `Analyze this food photo and estimate the macros. Return ONLY a JSON object with keys: calories (number), protein (number in grams), carbs (number in grams), fat (number in grams). No extra text, no markdown fences.${notes ? `\n\nUser notes about the meal: ${notes}. Use this context to improve your estimate.` : ''}` },
+                { text: `You are a nutrition analysis API. Analyze the food image and return a STRICT JSON object with exactly these keys: "calories" (number), "protein" (number in grams), "carbs" (number in grams), "fat" (number in grams). Do NOT include markdown, do NOT include explanations, do NOT include code blocks. Only valid JSON.${notes ? `\n\nAdditional context provided by the user: "${notes}". Use this to refine portion size estimates and cooking method adjustments.` : ''}` },
                 { 
                   inline_data: { 
                     mime_type: 'image/jpeg', 
@@ -251,11 +251,12 @@ export default function NutritionTab({ state, dispatch }) {
 
                   <div>
                     <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Context Notes</label>
-                    <input 
-                      className="w-full p-4 bg-zinc-800 text-white border border-zinc-700 rounded-none outline-none text-mono text-sm focus:border-accent transition-colors"
+                    <textarea 
+                      className="w-full p-4 bg-zinc-800 text-white border border-zinc-700 rounded-none outline-none text-mono text-sm focus:border-accent transition-colors resize-none"
                       value={notes}
                       onChange={e => setNotes(e.target.value)}
                       placeholder="e.g. Grilled with olive oil, extra rice, sauce on the side"
+                      rows={3}
                     />
                   </div>
 

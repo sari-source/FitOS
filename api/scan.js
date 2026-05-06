@@ -10,7 +10,7 @@ export async function POST(req) {
   try {
     const body = await req.json();
 
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemma-4-31b-it:generateContent?key=${apiKey}`;
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
 
     const response = await fetch(endpoint, {
       method: 'POST',
@@ -27,6 +27,12 @@ export async function POST(req) {
     }
 
     const data = await response.json();
+    const rawContent = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    
+    // Clean markdown fences if present
+    const cleaned = rawContent.replace(/```json/g, '').replace(/```/g, '').trim();
+    data.candidates[0].content.parts[0].text = cleaned;
+    
     return new Response(JSON.stringify(data), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },

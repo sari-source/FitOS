@@ -13,7 +13,7 @@ app.post('/api/scan', async (req, res) => {
   }
 
   try {
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemma-4-31b-it:generateContent?key=${apiKey}`;
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
 
     const response = await fetch(endpoint, {
       method: 'POST',
