@@ -28,16 +28,14 @@ export default function NutritionTab({ state, dispatch }) {
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = async (event) => {
-      const base64Image = event.target.result;
-      setPhoto(base64Image);
-      setHasAnalyzed(false);
-      await analyzePhoto(base64Image, notes);
+    reader.onload = (event) => {
+      setPhoto(event.target.result);
     };
     reader.readAsDataURL(file);
   };
 
-  const analyzePhoto = async (base64Image, photoNotes = '') => {
+  const analyzePhoto = async () => {
+    if (!photo) return;
     setIsAnalyzing(true);
     setHasAnalyzed(false);
     try {
@@ -48,11 +46,11 @@ export default function NutritionTab({ state, dispatch }) {
           contents: [
             {
               parts: [
-                { text: `Analyze this food photo and estimate the macros. Return ONLY a JSON object with keys: calories (number), protein (number in grams), carbs (number in grams), fat (number in grams). No extra text, no markdown fences.${photoNotes ? `\n\nUser notes about the meal: ${photoNotes}. Use this context to improve your estimate.` : ''}` },
+                { text: `Analyze this food photo and estimate the macros. Return ONLY a JSON object with keys: calories (number), protein (number in grams), carbs (number in grams), fat (number in grams). No extra text, no markdown fences.${notes ? `\n\nUser notes about the meal: ${notes}. Use this context to improve your estimate.` : ''}` },
                 { 
                   inline_data: { 
                     mime_type: 'image/jpeg', 
-                    data: base64Image.split(',')[1] 
+                    data: photo.split(',')[1] 
                   } 
                 }
               ]
@@ -184,14 +182,14 @@ export default function NutritionTab({ state, dispatch }) {
               <div className="flex gap-3 mb-2">
                 <button
                   type="button"
-                  onClick={() => { setManualEntry(true); setPhoto(null); setHasAnalyzed(true); }}
+                  onClick={() => { setManualEntry(true); setPhoto(null); setHasAnalyzed(true); setNotes(''); }}
                   className={`flex-1 py-3 text-mono text-[10px] font-bold uppercase tracking-widest rounded-full transition-all border ${manualEntry ? 'bg-accent text-black border-accent' : 'bg-zinc-800 text-zinc-500 border-zinc-700 hover:text-zinc-300'}`}
                 >
                   Manual Entry
                 </button>
                 <button
                   type="button"
-                  onClick={() => { setManualEntry(false); }}
+                  onClick={() => { setManualEntry(false); setNotes(''); }}
                   className={`flex-1 py-3 text-mono text-[10px] font-bold uppercase tracking-widest rounded-full transition-all border ${!manualEntry ? 'bg-accent text-black border-accent' : 'bg-zinc-800 text-zinc-500 border-zinc-700 hover:text-zinc-300'}`}
                 >
                   Photo Scan
@@ -199,87 +197,77 @@ export default function NutritionTab({ state, dispatch }) {
               </div>
 
                {!manualEntry && (
-                <>
-                <div className="relative w-full h-64 bg-zinc-800 rounded-2xl overflow-hidden border-2 border-dashed border-zinc-700 flex items-center justify-center group">
-                  {photo ? (
-                    <>
-                      <img src={photo} alt="Preview" className="w-full h-full object-cover" />
-                      <button 
-                        onClick={() => { setPhoto(null); setHasAnalyzed(false); setMacros({ calories: '', protein: '', carbs: '', fat: '' }); }}
-                        className="absolute bottom-4 right-4 w-10 h-10 flex items-center justify-center hover:scale-110 transition-transform z-10"
-                        title="Remove Photo"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <polyline points="3 6 5 6 21 6"></polyline>
-                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                        </svg>
-                      </button>
-                    </>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center w-full h-full">
-                      {!showPhotoOptions ? (
-                        <label className="cursor-pointer flex flex-col items-center text-zinc-500 group-hover:text-accent transition-colors">
-                          <span className="text-4xl mb-3">📷</span>
-                          <span className="text-mono text-[10px] uppercase font-bold tracking-widest">Add Photo</span>
-                          <input type="file" className="hidden" readOnly onClick={(e) => { e.preventDefault(); setShowPhotoOptions(true); }} />
-                        </label>
-                      ) : (
-                        <div className="flex flex-col gap-3 animate-fade-in">
-                          <label className="cursor-pointer bg-zinc-700 hover:bg-accent hover:text-black text-zinc-300 px-6 py-3 rounded-full text-mono text-xs font-bold uppercase tracking-widest transition-all border border-zinc-600 text-center block">
-                            Take Photo
-                            <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handlePhotoChange} />
-                          </label>
-                          <label className="cursor-pointer bg-zinc-700 hover:bg-accent hover:text-black text-zinc-300 px-6 py-3 rounded-full text-mono text-xs font-bold uppercase tracking-widest transition-all border border-zinc-600 text-center block">
-                            Upload Image
-                            <input type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
-                          </label>
-                          <button 
-                            onClick={() => setShowPhotoOptions(false)}
-                            className="text-zinc-600 text-[10px] uppercase font-bold hover:text-zinc-400 transition-colors"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  {isAnalyzing && (
-                    <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center text-accent font-bold animate-pulse">
-                      <div className="text-display text-xl mb-2">ANALYZING DATA...</div>
-                      <div className="text-mono text-[10px] uppercase">Scanning nutrition profile</div>
-                    </div>
-                  )}
-                </div>
-                
-                {photo && (
-                  <div className="mt-3 space-y-2 animate-fade-in">
-                    <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">Context Notes</label>
+                <div className="space-y-4 animate-fade-in">
+                  <div>
+                    <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Context Notes</label>
                     <input 
-                      className="w-full p-3 bg-zinc-800 text-white border border-zinc-700 rounded-none outline-none text-mono text-xs focus:border-accent transition-colors"
+                      className="w-full p-4 bg-zinc-800 text-white border border-zinc-700 rounded-none outline-none text-mono text-sm focus:border-accent transition-colors"
                       value={notes}
                       onChange={e => setNotes(e.target.value)}
                       placeholder="e.g. Grilled with olive oil, extra rice, sauce on the side"
                     />
-                    {!hasAnalyzed ? (
-                      <button
-                        type="button"
-                        onClick={() => analyzePhoto(photo, notes)}
-                        className="w-full py-3 bg-accent text-black font-bold text-mono text-xs uppercase tracking-widest hover:bg-white transition-colors"
-                      >
-                        Analyze Photo
-                      </button>
+                  </div>
+
+                  <div className="relative w-full h-64 bg-zinc-800 rounded-2xl overflow-hidden border-2 border-dashed border-zinc-700 flex items-center justify-center group">
+                    {photo ? (
+                      <>
+                        <img src={photo} alt="Preview" className="w-full h-full object-cover" />
+                        <button 
+                          onClick={() => { setPhoto(null); setHasAnalyzed(false); setMacros({ calories: '', protein: '', carbs: '', fat: '' }); }}
+                          className="absolute bottom-4 right-4 w-10 h-10 flex items-center justify-center hover:scale-110 transition-transform z-10"
+                          title="Remove Photo"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="3 6 5 6 21 6"></polyline>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                          </svg>
+                        </button>
+                      </>
                     ) : (
-                      <button
-                        type="button"
-                        onClick={() => { setHasAnalyzed(false); analyzePhoto(photo, notes); }}
-                        className="w-full py-3 bg-zinc-700 text-white font-bold text-mono text-xs uppercase tracking-widest hover:bg-accent hover:text-black transition-colors"
-                      >
-                        Rescan with Notes
-                      </button>
+                      <div className="flex flex-col items-center justify-center w-full h-full">
+                        {!showPhotoOptions ? (
+                          <label className="cursor-pointer flex flex-col items-center text-zinc-500 group-hover:text-accent transition-colors">
+                            <span className="text-4xl mb-3">📷</span>
+                            <span className="text-mono text-[10px] uppercase font-bold tracking-widest">Add Photo</span>
+                            <input type="file" className="hidden" readOnly onClick={(e) => { e.preventDefault(); setShowPhotoOptions(true); }} />
+                          </label>
+                        ) : (
+                          <div className="flex flex-col gap-3 animate-fade-in">
+                            <label className="cursor-pointer bg-zinc-700 hover:bg-accent hover:text-black text-zinc-300 px-6 py-3 rounded-full text-mono text-xs font-bold uppercase tracking-widest transition-all border border-zinc-600 text-center block">
+                              Take Photo
+                              <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handlePhotoChange} />
+                            </label>
+                            <label className="cursor-pointer bg-zinc-700 hover:bg-accent hover:text-black text-zinc-300 px-6 py-3 rounded-full text-mono text-xs font-bold uppercase tracking-widest transition-all border border-zinc-600 text-center block">
+                              Upload Image
+                              <input type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
+                            </label>
+                            <button 
+                              onClick={() => setShowPhotoOptions(false)}
+                              className="text-zinc-600 text-[10px] uppercase font-bold hover:text-zinc-400 transition-colors"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {isAnalyzing && (
+                      <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center text-accent font-bold animate-pulse">
+                        <div className="text-display text-xl mb-2">ANALYZING DATA...</div>
+                        <div className="text-mono text-[10px] uppercase">Scanning nutrition profile</div>
+                      </div>
                     )}
                   </div>
-                )}
-               </>
+
+                  <button
+                    type="button"
+                    disabled={!photo}
+                    onClick={analyzePhoto}
+                    className={`w-full py-4 font-bold text-mono text-xs uppercase tracking-widest transition-colors rounded-none ${photo ? 'bg-accent text-black hover:bg-white shadow-[0_0_15px_rgba(255,255,255,0.3)]' : 'bg-zinc-800 text-zinc-600 cursor-not-allowed'}`}
+                  >
+                    {hasAnalyzed ? 'RESCAN WITH NOTES' : 'ANALYZE PHOTO'}
+                  </button>
+                </div>
                )}
 
                {hasAnalyzed && !manualEntry && (
