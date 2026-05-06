@@ -182,14 +182,14 @@ export default function NutritionTab({ state, dispatch }) {
               <div className="flex gap-3 mb-2">
                 <button
                   type="button"
-                  onClick={() => { setManualEntry(true); setPhoto(null); setHasAnalyzed(true); setNotes(''); }}
+                  onClick={() => { setManualEntry(true); setPhoto(null); setHasAnalyzed(false); setNotes(''); }}
                   className={`flex-1 py-3 text-mono text-[10px] font-bold uppercase tracking-widest rounded-full transition-all border ${manualEntry ? 'bg-accent text-black border-accent' : 'bg-zinc-800 text-zinc-500 border-zinc-700 hover:text-zinc-300'}`}
                 >
                   Manual Entry
                 </button>
                 <button
                   type="button"
-                  onClick={() => { setManualEntry(false); setNotes(''); }}
+                  onClick={() => { setManualEntry(false); setHasAnalyzed(false); setMacros({ calories: '', protein: '', carbs: '', fat: '' }); }}
                   className={`flex-1 py-3 text-mono text-[10px] font-bold uppercase tracking-widest rounded-full transition-all border ${!manualEntry ? 'bg-accent text-black border-accent' : 'bg-zinc-800 text-zinc-500 border-zinc-700 hover:text-zinc-300'}`}
                 >
                   Photo Scan
@@ -271,14 +271,14 @@ export default function NutritionTab({ state, dispatch }) {
                )}
 
                {hasAnalyzed && !manualEntry && (
-                 <button
-                   type="button"
-                   onClick={() => { setManualEntry(true); setPhoto(null); }}
-                   className="w-full -mt-2 mb-2 text-mono text-[10px] uppercase font-bold tracking-widest text-zinc-500 hover:text-accent transition-colors"
-                 >
-                   Enter macros manually →
-                 </button>
-               )}
+                  <button
+                    type="button"
+                    onClick={() => { setManualEntry(true); setPhoto(null); setHasAnalyzed(false); }}
+                    className="w-full -mt-2 mb-2 text-mono text-[10px] uppercase font-bold tracking-widest text-zinc-500 hover:text-accent transition-colors"
+                  >
+                    Enter macros manually →
+                  </button>
+                )}
 
               {(hasAnalyzed || manualEntry) && (
                 <div className="grid grid-cols-2 gap-4 animate-fade-in">
