@@ -39,15 +39,7 @@ export default function NutritionTab({ state, dispatch }) {
     setIsAnalyzing(true);
     setHasAnalyzed(false);
     try {
-      const apiKey = import.meta.env.VITE_AI_API_KEY;
-      if (!apiKey) {
-        throw new Error('API Key is missing. Please check your .env file.');
-      }
-
-      // Using v1beta for Gemma 4 support as requested
-      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemma-4-31b-it:generateContent?key=${apiKey}`;
-      
-      const response = await fetch(endpoint, {
+      const response = await fetch('/api/scan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -69,7 +61,7 @@ export default function NutritionTab({ state, dispatch }) {
 
       if (!response.ok) {
         const errData = await response.json().catch(() => ({}));
-        throw new Error(errData.error?.message || 'API Error');
+        throw new Error(errData.error || 'Scan failed');
       }
 
       const data = await response.json();
