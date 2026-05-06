@@ -10,7 +10,7 @@ export async function POST(req) {
   try {
     const body = await req.json();
 
-    const endpoint = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash-001:generateContent?key=${apiKey}`;
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemma-4-31b-it:generateContent?key=${apiKey}`;
 
     const response = await fetch(endpoint, {
       method: 'POST',
