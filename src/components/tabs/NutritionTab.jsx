@@ -46,7 +46,7 @@ export default function NutritionTab({ state, dispatch }) {
           contents: [
             {
               parts: [
-                { text: `You are a nutrition analysis API. Analyze the food image and return a STRICT JSON object with exactly these keys: "calories" (number), "protein" (number in grams), "carbs" (number in grams), "fat" (number in grams). Do NOT include markdown, do NOT include explanations, do NOT include code blocks. Only valid JSON.${notes ? `\n\nAdditional context provided by the user: "${notes}". Use this to refine portion size estimates and cooking method adjustments.` : ''}` },
+                { text: `You are a nutrition analysis API. Analyze the food image and return a STRICT JSON object with exactly these keys: "calories" (number), "protein" (number in grams), "carbs" (number in grams), "fat" (number in grams). Use 0 if a value cannot be determined. Do NOT include markdown, explanations, or code blocks. Only valid JSON.${notes ? `\n\nAdditional context provided by the user: "${notes}". Use this to refine portion size estimates and cooking method adjustments.` : ''}` },
                 { 
                   inline_data: { 
                     mime_type: 'image/jpeg', 
@@ -55,7 +55,10 @@ export default function NutritionTab({ state, dispatch }) {
                 }
               ]
             }
-          ]
+          ],
+          generationConfig: {
+            response_mime_type: "application/json"
+          }
         })
       });
 
@@ -65,8 +68,13 @@ export default function NutritionTab({ state, dispatch }) {
       }
 
       const data = await response.json();
-      const content = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      console.log('AI Raw Response:', data);
       
+      const candidate = data.candidates?.[0];
+      if (!candidate) throw new Error('AI returned no candidates');
+      if (candidate.finishReason === 'SAFETY') throw new Error('Image blocked by safety filters');
+      
+      const content = candidate.content?.parts?.[0]?.text;
       if (!content) throw new Error('AI returned no content');
       
       const startIdx = content.indexOf('{');
