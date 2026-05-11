@@ -3,18 +3,22 @@ import { getDaysInMonth, getFirstDayOfMonth, formatDate } from '../../utils/date
 import DaySheet from '../shared/DaySheet';
 
 export default function CalendarTab({ state, dispatch }) {
-  const [selectedDate, setSelectedDate] = useState(null);
+  const [selectedDate, setSelectedDate] = useState(state.selectedCalDate);
   const currentMonth = state.calMonth || new Date();
   const year = currentMonth.getFullYear();
   const month = currentMonth.getMonth();
 
   useEffect(() => {
+    if (state.selectedCalDate) {
+      setSelectedDate(state.selectedCalDate);
+      dispatch({ type: 'SET_SELECTED_CAL_DATE', payload: null });
+    }
     if (selectedDate) {
       dispatch({ type: 'SET_POPUP_STATE', payload: true });
     } else {
       dispatch({ type: 'SET_POPUP_STATE', payload: false });
     }
-  }, [selectedDate, dispatch]);
+  }, [selectedDate, state.selectedCalDate, dispatch]);
 
   const handlePrevMonth = () => {
     const newDate = new Date(year, month - 1, 1);
@@ -44,18 +48,22 @@ export default function CalendarTab({ state, dispatch }) {
       const dayName = date.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
       const isPastDate = dateStr < todayStr;
       let hasPlan = false;
-      if (isPastDate) {
-        const allSnaps = [...(state.planHistory || [])];
-        const relevant = allSnaps.filter(s => s.date <= dateStr);
-        if (relevant.length > 0) {
-          const snap = relevant[relevant.length - 1];
-          hasPlan = snap.plan[dayName] && !snap.plan[dayName].rest;
-        } else if (state.baseline) {
-          hasPlan = state.baseline.plan[dayName] && !state.baseline.plan[dayName]?.rest;
-        }
-      } else {
-        hasPlan = state.plan[dayName] && !state.plan[dayName].rest;
-      }
+       let dotColor = "var(--accent)";
+       if (isPastDate) {
+         const allSnaps = [...(state.planHistory || [])];
+         const relevant = allSnaps.filter(s => s.date <= dateStr);
+         if (relevant.length > 0) {
+           const snap = relevant[relevant.length - 1];
+           hasPlan = snap.plan[dayName] && !snap.plan[dayName].rest;
+           if (hasPlan && snap.plan[dayName].color) dotColor = snap.plan[dayName].color;
+         } else if (state.baseline) {
+           hasPlan = state.baseline.plan[dayName] && !state.baseline.plan[dayName]?.rest;
+           if (hasPlan && state.baseline.plan[dayName].color) dotColor = state.baseline.plan[dayName].color;
+         }
+       } else {
+         hasPlan = state.plan[dayName] && !state.plan[dayName].rest;
+         if (hasPlan && state.plan[dayName].color) dotColor = state.plan[dayName].color;
+       }
 
       let styles = "bg-zinc-900 text-zinc-500";
       if (isToday) styles = "bg-accent text-black font-black";
@@ -68,9 +76,12 @@ export default function CalendarTab({ state, dispatch }) {
           className={`h-20 w-full border border-zinc-800 flex flex-col items-center justify-center cursor-pointer relative transition-all active:scale-90 ${styles}`}
         >
           <span className="text-display text-xl">{d}</span>
-          {hasPlan && !isToday && !hasData && (
-            <div className="absolute bottom-2 w-1 h-1 bg-accent rounded-full animate-pulse"></div>
-          )}
+           {hasPlan && !isToday && !hasData && (
+             <div 
+               className="absolute bottom-2 w-1 h-1 rounded-full animate-pulse" 
+               style={{ backgroundColor: dotColor }}
+             ></div>
+           )}
         </div>
       );
     }
@@ -109,6 +120,7 @@ export default function CalendarTab({ state, dispatch }) {
           macros={state.macros}
           planHistory={state.planHistory}
           baseline={state.baseline}
+          onClose={() => setSelectedDate(null)}
         />
       )}
       

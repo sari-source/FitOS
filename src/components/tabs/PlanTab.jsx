@@ -1,18 +1,30 @@
 import { useState, useEffect } from 'react';
-import { parsePlan } from '../../utils/planParser';
+import { parsePlan, parseDayContent } from '../../utils/planParser';
 
 const DAYS_ORDER = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+const DEFAULT_COLORS = {
+  sunday: '#FF5733',
+  monday: '#33FF57',
+  tuesday: '#3357FF',
+  wednesday: '#F333FF',
+  thursday: '#FFFF33',
+  friday: '#33FFFF',
+  saturday: '#FF8C00',
+};
 
 export default function PlanTab({ state, dispatch }) {
   const [text, setText] = useState('');
   const [addDayOpen, setAddDayOpen] = useState(false);
   const [editingDay, setEditingDay] = useState(null);
   const [editDayName, setEditDayName] = useState('');
+  const [editTitle, setEditTitle] = useState('');
+  const [editColor, setEditColor] = useState('#ff0000');
   const [editExercises, setEditExercises] = useState([]);
   const [editingExerciseIndex, setEditingExerciseIndex] = useState(null);
   const [newExerciseText, setNewExerciseText] = useState('');
 
   const [newDayName, setNewDayName] = useState('');
+  const [newDayTitle, setNewDayTitle] = useState('');
   const [newDayExercisesText, setNewDayExercisesText] = useState('');
   const [expandedDay, setExpandedDay] = useState(null);
 
@@ -32,19 +44,19 @@ export default function PlanTab({ state, dispatch }) {
       alert('Please enter a valid day name (Monday - Sunday)');
       return;
     }
-    const exercises = newDayExercisesText
-      .split(/[,;\n]/)
-      .map(ex => ex.replace(/\s*\d+[sxX]\d+.*$/, '').replace(/\s*\d+\s*(sets?|reps?).*$/, '').trim())
-      .filter(ex => ex.length > 0);
-    dispatch({ type: 'UPDATE_PLAN_DAY', payload: { day: dayKey, data: { rest: false, exercises } } });
+    const { title: parsedTitle, exercises } = parseDayContent(newDayExercisesText);
+    const finalTitle = newDayTitle.trim() || parsedTitle;
+    dispatch({ type: 'UPDATE_PLAN_DAY', payload: { day: dayKey, data: { rest: false, title: finalTitle, exercises, color: DEFAULT_COLORS[dayKey] } } });
     setExpandedDay(dayKey);
     setNewDayName('');
+    setNewDayTitle('');
     setNewDayExercisesText('');
     setAddDayOpen(false);
   };
 
   const openAddDay = () => {
     setNewDayName('');
+    setNewDayTitle('');
     setNewDayExercisesText('');
     setAddDayOpen(true);
   };
@@ -52,16 +64,23 @@ export default function PlanTab({ state, dispatch }) {
   const startEditDay = (day, data) => {
     setEditingDay(day);
     setEditDayName(day);
+    setEditTitle(data.title || '');
+    setEditColor(data.color || DEFAULT_COLORS[day] || '#ff0000');
     setEditExercises(data.exercises || []);
   };
 
   const saveEditDay = () => {
     const newDay = editDayName.toLowerCase();
     if (!DAYS_ORDER.includes(newDay)) return;
-    if (newDay !== editingDay) {
-      dispatch({ type: 'DELETE_PLAN_DAY', payload: editingDay });
-    }
-    dispatch({ type: 'UPDATE_PLAN_DAY', payload: { day: newDay, data: { rest: false, exercises: editExercises } } });
+    
+    dispatch({ 
+      type: 'UPDATE_PLAN_DAY', 
+      payload: { 
+        day: newDay, 
+        oldDay: editingDay, 
+        data: { rest: false, title: editTitle, color: editColor, exercises: editExercises } 
+      } 
+    });
     setExpandedDay(newDay);
     closeEdit();
   };
@@ -69,6 +88,8 @@ export default function PlanTab({ state, dispatch }) {
   const closeEdit = () => {
     setEditingDay(null);
     setEditDayName('');
+    setEditTitle('');
+    setEditColor('#ff0000');
     setEditExercises([]);
     setEditingExerciseIndex(null);
     setNewExerciseText('');
@@ -167,23 +188,27 @@ export default function PlanTab({ state, dispatch }) {
                     onClick={() => setExpandedDay(isExpanded ? null : day)}
                     className="w-full p-5 flex justify-between items-center"
                   >
-                    <div className="flex items-center gap-4">
-                      <svg 
-                        xmlns="http://www.w3.org/2000/svg" 
-                        width="16" 
-                        height="16" 
-                        viewBox="0 0 24 24" 
-                        fill="none" 
-                        stroke="currentColor" 
-                        strokeWidth="2" 
-                        strokeLinecap="round" 
-                        strokeLinejoin="round" 
-                        className={`text-zinc-600 transition-transform duration-300 ${isExpanded ? 'rotate-90' : ''}`}
-                      >
-                        <polyline points="9 18 15 12 9 6"></polyline>
-                      </svg>
-                      <span className="text-display text-2xl text-white uppercase">{capitalizeDay(day)}</span>
-                    </div>
+                     <div className="flex items-center gap-4">
+                       <div 
+                         className="w-3 h-3 rounded-full shadow-sm" 
+                         style={{ backgroundColor: data.color || DEFAULT_COLORS[day] }}
+                       ></div>
+                       <svg 
+                         xmlns="http://www.w3.org/2000/svg" 
+                         width="16" 
+                         height="16" 
+                         viewBox="0 0 24 24" 
+                         fill="none" 
+                         stroke="currentColor" 
+                         strokeWidth="2" 
+                         strokeLinecap="round" 
+                         strokeLinejoin="round" 
+                         className={`text-zinc-600 transition-transform duration-300 ${isExpanded ? 'rotate-90' : ''}`}
+                       >
+                         <polyline points="9 18 15 12 9 6"></polyline>
+                       </svg>
+                       <span className="text-display text-2xl text-white uppercase">{data.title || capitalizeDay(day)}</span>
+                     </div>
                     <span className={`text-mono text-[10px] font-bold px-2 py-1 rounded border ${data.rest ? 'bg-zinc-800 text-zinc-500 border-zinc-700' : 'bg-accent/10 text-accent border-accent/30'}`}>
                       {data.rest ? 'RECOVERY' : `${data.exercises.length} UNITS`}
                     </span>
@@ -234,60 +259,70 @@ export default function PlanTab({ state, dispatch }) {
       )}
 
       {addDayOpen && (
-        <div className="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-end">
-          <div
-            className="bg-zinc-900 w-full rounded-t-[40px] p-8 animate-slide-up max-h-[90vh] overflow-y-auto border-t border-white/10"
-            onClick={e => e.stopPropagation()}
-          >
-            <h3 className="text-display text-3xl text-white mb-6 italic">ADD DAY</h3>
-
-            <div className="space-y-6">
-              <div>
-                <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Day Name</label>
-                <select
-                  className="w-full p-4 bg-zinc-800 text-white border border-zinc-700 rounded-none outline-none text-mono text-sm focus:border-accent transition-colors appearance-none"
-                  value={newDayName}
-                  onChange={e => setNewDayName(e.target.value)}
+        <>
+          <div className="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-end">
+            <div
+              className="bg-zinc-900 w-full rounded-t-[40px] p-8 animate-slide-up max-h-[90vh] overflow-y-auto border-t border-white/10"
+              onClick={e => e.stopPropagation()}
+            >
+              <h3 className="text-display text-3xl text-white mb-6 italic">ADD DAY</h3>
+            
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Day Name</label>
+                  <select
+                    className="w-full p-4 bg-zinc-800 text-white border border-zinc-700 rounded-none outline-none text-mono text-sm focus:border-accent transition-colors appearance-none"
+                    value={newDayName}
+                    onChange={e => setNewDayName(e.target.value)}
+                  >
+                    <option value="" disabled>Select a day</option>
+                    {DAYS_ORDER.map(d => (
+                      <option key={d} value={d}>{capitalizeDay(d)}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Workout Title</label>
+                  <input
+                    className="w-full p-4 bg-zinc-800 text-white border border-zinc-700 rounded-none outline-none text-mono text-sm focus:border-accent transition-colors"
+                    placeholder="e.g. Push Day, Leg Day..."
+                    value={newDayTitle}
+                    onChange={e => setNewDayTitle(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Exercises</label>
+                  <textarea
+                    className="w-full h-40 p-4 bg-zinc-800 text-white border border-zinc-700 rounded-none outline-none text-mono text-sm focus:border-accent transition-colors resize-none"
+                    placeholder="Bench Press, Incline DB Press, Cable Flyes..."
+                    value={newDayExercisesText}
+                    onChange={e => setNewDayExercisesText(e.target.value)}
+                  />
+                </div>
+              </div>
+            
+              <div className="flex gap-4 mt-10">
+                <button
+                  onClick={() => setAddDayOpen(false)}
+                  className="flex-1 py-4 bg-zinc-800 text-zinc-400 font-bold text-display text-lg rounded-none hover:bg-zinc-700 transition-colors"
                 >
-                  <option value="" disabled>Select a day</option>
-                  {DAYS_ORDER.map(d => (
-                    <option key={d} value={d}>{capitalizeDay(d)}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Exercises</label>
-                <textarea
-                  className="w-full h-40 p-4 bg-zinc-800 text-white border border-zinc-700 rounded-none outline-none text-mono text-sm focus:border-accent transition-colors resize-none"
-                  placeholder="Bench Press, Incline DB Press, Cable Flyes..."
-                  value={newDayExercisesText}
-                  onChange={e => setNewDayExercisesText(e.target.value)}
-                />
+                  CANCEL
+                </button>
+                <button
+                  onClick={handleAddDay}
+                  disabled={!canAddDay}
+                  className={`flex-1 py-4 font-black text-display text-lg rounded-none transition-all ${canAddDay ? 'bg-accent text-black shadow-[0_0_20px_rgba(255,255,255,0.3)] hover:bg-white' : 'bg-zinc-800 text-zinc-600 cursor-not-allowed'}`}
+                >
+                  SAVE DAY
+                </button>
               </div>
             </div>
-
-            <div className="flex gap-4 mt-10">
-              <button
-                onClick={() => setAddDayOpen(false)}
-                className="flex-1 py-4 bg-zinc-800 text-zinc-400 font-bold text-display text-lg rounded-none hover:bg-zinc-700 transition-colors"
-              >
-                CANCEL
-              </button>
-              <button
-                onClick={handleAddDay}
-                disabled={!canAddDay}
-                className={`flex-1 py-4 font-black text-display text-lg rounded-none transition-all ${canAddDay ? 'bg-accent text-black shadow-[0_0_20px_rgba(255,255,255,0.3)] hover:bg-white' : 'bg-zinc-800 text-zinc-600 cursor-not-allowed'}`}
-              >
-                SAVE DAY
-              </button>
-            </div>
+            <div
+              className="absolute inset-0 -z-10"
+              onClick={() => setAddDayOpen(false)}
+            ></div>
           </div>
-          <div
-            className="absolute inset-0 -z-10"
-            onClick={() => setAddDayOpen(false)}
-          ></div>
-        </div>
+        </>
       )}
 
       {editingDay && (
@@ -299,21 +334,37 @@ export default function PlanTab({ state, dispatch }) {
             <h3 className="text-display text-3xl text-white mb-6 italic">EDIT DAY</h3>
 
             <div className="space-y-6">
-              <div>
-                <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Day</label>
-                <select
-                  className="w-full p-4 bg-zinc-800 text-white border border-zinc-700 rounded-none outline-none text-mono text-sm focus:border-accent transition-colors appearance-none"
-                  value={editDayName}
-                  onChange={e => setEditDayName(e.target.value)}
-                >
-                  {DAYS_ORDER.map(d => (
-                    <option key={d} value={d}>{capitalizeDay(d)}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                    <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-3">Exercises</label>
+               <div>
+                 <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Day</label>
+                 <select
+                   className="w-full p-4 bg-zinc-800 text-white border border-zinc-700 rounded-none outline-none text-mono text-sm focus:border-accent transition-colors appearance-none"
+                   value={editDayName}
+                   onChange={e => setEditDayName(e.target.value)}
+                 >
+                   {DAYS_ORDER.map(d => (
+                     <option key={d} value={d}>{capitalizeDay(d)}</option>
+                   ))}
+                 </select>
+               </div>
+               <div>
+                 <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Day Title</label>
+                 <div className="flex gap-3">
+                   <input
+                     className="flex-1 p-4 bg-zinc-800 text-white border border-zinc-700 rounded-none outline-none text-mono text-sm focus:border-accent transition-colors"
+                     placeholder="e.g. Upper Body / Pull Day"
+                     value={editTitle}
+                     onChange={e => setEditTitle(e.target.value)}
+                   />
+                   <input
+                     type="color"
+                     className="w-14 h-14 p-1 bg-zinc-800 border border-zinc-700 rounded-none outline-none cursor-pointer"
+                     value={editColor}
+                     onChange={e => setEditColor(e.target.value)}
+                   />
+                 </div>
+               </div>
+               <div>
+                     <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-3">Exercises</label>
                     <div className="space-y-2">
                       {editExercises.map((ex, i) => (
                         <div key={i} className="flex items-center gap-2 bg-zinc-800 p-3 border border-zinc-700">

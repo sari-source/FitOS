@@ -2,7 +2,7 @@ import MacroBar from './MacroBar';
 import { formatDate } from '../../utils/dateUtils';
 import { useMacros } from '../../hooks/useMacros';
 
-export default function DaySheet({ date, plan, logs, meals, macros, planHistory, baseline }) {
+export default function DaySheet({ date, plan, logs, meals, macros, planHistory, baseline, onClose }) {
   const todayStr = formatDate(new Date());
   const dateStr = formatDate(date);
   const isPast = dateStr < todayStr;
@@ -28,10 +28,13 @@ export default function DaySheet({ date, plan, logs, meals, macros, planHistory,
   const dayLogs = logs[dateStr] || [];
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 glass rounded-t-[40px] p-8 max-h-[90vh] overflow-y-auto animate-slide-up z-50 border-t border-white/10 shadow-2xl">
-      <div className="w-16 h-1 bg-zinc-700 rounded-full mx-auto mb-8"></div>
-      
-      <div className="flex justify-between items-end mb-8">
+        <div className="fixed bottom-0 left-0 right-0 glass rounded-t-[40px] p-8 max-h-[90vh] overflow-y-auto animate-slide-up z-50 border-t border-white/10 shadow-2xl">
+          <div 
+            className="w-16 h-1 bg-zinc-700 rounded-full mx-auto mb-8 cursor-pointer hover:bg-zinc-500 transition-colors"
+            onClick={onClose}
+          ></div>
+          
+          <div className="flex justify-between items-end mb-8">
         <h3 className="text-display text-4xl text-white leading-none">
           {date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
           <span className="text-zinc-600 ml-2 text-2xl">{date.getFullYear()}</span>

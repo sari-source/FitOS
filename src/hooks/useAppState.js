@@ -26,10 +26,11 @@ const initialState = {
   macros: storage.get(storage.getKeys().MACROS),
   plan: storage.get(storage.getKeys().PLAN) || {},
   logs: storage.get(storage.getKeys().LOGS) || {},
-  meals: storage.get(storage.getKeys().MEALS) || {},
+  meals: (storage.get(storage.getKeys().MEALS) && typeof storage.get(storage.getKeys().MEALS) === 'object' && !Array.isArray(storage.get(storage.getKeys().MEALS))) ? storage.get(storage.getKeys().MEALS) : {},
   planHistory: initialPlanHistory,
   baseline,
   calMonth: new Date(),
+  selectedCalDate: null,
   isPopupOpen: false,
 };
 
@@ -53,8 +54,19 @@ function appReducer(state, action) {
     }
     case 'UPDATE_PLAN_DAY': {
       const updatedHistory = pushSnapshot(state);
-      const { day, data } = action.payload;
-      const updatedPlan = { ...state.plan, [day]: data };
+      const { day, data, oldDay } = action.payload;
+      const updatedPlan = { ...state.plan };
+      
+      if (oldDay && oldDay !== day) {
+        const existingData = updatedPlan[day];
+        if (existingData) {
+          updatedPlan[oldDay] = existingData;
+        } else {
+          delete updatedPlan[oldDay];
+        }
+      }
+      
+      updatedPlan[day] = data;
       storage.set(storage.getKeys().PLAN, updatedPlan);
       return { ...state, plan: updatedPlan, planHistory: updatedHistory };
     }
@@ -84,7 +96,19 @@ function appReducer(state, action) {
       const { date, entry } = action.payload;
       const updatedLogs = { ...state.logs };
       if (!updatedLogs[date]) updatedLogs[date] = [];
-      updatedLogs[date] = [...(updatedLogs[date] || []), entry];
+      
+      const existingIndex = updatedLogs[date].findIndex(
+        log => log.exercise === entry.exercise && log.sets === entry.sets
+      );
+
+      if (existingIndex > -1) {
+        const newLogs = [...updatedLogs[date]];
+        newLogs[existingIndex] = entry;
+        updatedLogs[date] = newLogs;
+      } else {
+        updatedLogs[date] = [...updatedLogs[date], entry];
+      }
+      
       storage.set(storage.getKeys().LOGS, updatedLogs);
       return { ...state, logs: updatedLogs };
     }
@@ -98,6 +122,8 @@ function appReducer(state, action) {
     }
     case 'SET_CAL_MONTH':
       return { ...state, calMonth: action.payload };
+    case 'SET_SELECTED_CAL_DATE':
+      return { ...state, selectedCalDate: action.payload };
     default:
       return state;
   }

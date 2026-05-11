@@ -7,7 +7,7 @@ import NutritionTab from './components/tabs/NutritionTab';
 import LogTab from './components/tabs/LogTab';
 
 const TABS = [
-  { id: 'profile', label: 'Profile', icon: '👤' },
+  { id: 'profile', label: 'Main', icon: '👤' },
   { id: 'plan', label: 'Plan', icon: '📅' },
   { id: 'calendar', label: 'Calendar', icon: '🗓️' },
   { id: 'nutrition', label: 'Nutrition', icon: '🍎' },
@@ -25,12 +25,12 @@ export default function App() {
 
   const renderTab = () => {
     switch (activeTab) {
-      case 'profile': return <ProfileTab state={state} dispatch={dispatch} />;
-      case 'plan': return <PlanTab state={state} dispatch={dispatch} />;
-      case 'calendar': return <CalendarTab state={state} dispatch={dispatch} />;
-      case 'nutrition': return <NutritionTab state={state} dispatch={dispatch} />;
-      case 'log': return <LogTab state={state} dispatch={dispatch} />;
-      default: return <ProfileTab state={state} dispatch={dispatch} />;
+      case 'profile': return <ProfileTab state={state} dispatch={dispatch} setActiveTab={setActiveTab} />;
+      case 'plan': return <PlanTab state={state} dispatch={dispatch} setActiveTab={setActiveTab} />;
+      case 'calendar': return <CalendarTab state={state} dispatch={dispatch} setActiveTab={setActiveTab} />;
+      case 'nutrition': return <NutritionTab state={state} dispatch={dispatch} setActiveTab={setActiveTab} />;
+      case 'log': return <LogTab state={state} dispatch={dispatch} setActiveTab={setActiveTab} />;
+      default: return <ProfileTab state={state} dispatch={dispatch} setActiveTab={setActiveTab} />;
     }
   };
 

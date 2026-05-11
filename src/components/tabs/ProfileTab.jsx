@@ -4,7 +4,7 @@ import MacroCards from '../shared/MacroCards';
 import MacroBar from '../shared/MacroBar';
 import { useMacros } from '../../hooks/useMacros';
 
-export default function ProfileTab({ state, dispatch }) {
+export default function ProfileTab({ state, dispatch, setActiveTab }) {
   const [formData, setFormData] = useState(state.profile || {
     weight: '',
     height: '',
@@ -46,9 +46,29 @@ export default function ProfileTab({ state, dispatch }) {
     { value: 'agg_cut', label: 'Aggressive Cut' },
   ];
 
+  const todayDayName = today.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+  const todayPlan = state.plan[todayDayName];
+  const todayPlanDisplay = (!todayPlan || todayPlan.rest) ? 'Rest Day' : (todayPlan.title || (todayPlan.exercises?.length ? 'WORKOUT' : 'Rest Day'));
+
   return (
     <div className="p-6 max-w-md mx-auto animate-fade-in">
       <h2 className="text-display text-5xl text-white mb-8 tracking-tighter italic">OPERATOR<br/><span className="text-accent">PROFILE</span></h2>
+      <button 
+        onClick={() => {
+          dispatch({ type: 'SET_SELECTED_CAL_DATE', payload: today });
+          setActiveTab('calendar');
+        }}
+        className="w-full mb-8 p-4 bg-zinc-900 border border-zinc-800 rounded-2xl flex justify-between items-center group hover:border-accent transition-all active:scale-95"
+      >
+        <div className="flex flex-col items-start">
+          <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1">Today's Plan</span>
+          <span className="text-display text-2xl text-white italic">{todayPlanDisplay}</span>
+        </div>
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-600 group-hover:text-accent transition-colors">
+          <path d="M5 12h14"></path>
+          <path d="m12 5 7 7-7 7"></path>
+        </svg>
+      </button>
 
       {editing ? (
         <div className="animate-fade-in">

@@ -5,7 +5,7 @@ export function useMacros(meals, macros, date) {
   const dateStr = useMemo(() => formatDate(date), [date]);
   
   return useMemo(() => {
-    const dayMeals = meals[dateStr] || [];
+    const dayMeals = (meals && typeof meals === 'object' && !Array.isArray(meals)) ? (meals[dateStr] || []) : [];
     
     const totals = dayMeals.reduce((acc, meal) => {
       acc.calories += meal.calories || 0;
@@ -14,7 +14,7 @@ export function useMacros(meals, macros, date) {
       acc.fat += meal.fat || 0;
       return acc;
     }, { calories: 0, protein: 0, carbs: 0, fat: 0 });
-
+    
     return { totals, targets: macros };
   }, [meals, dateStr, macros]);
 }

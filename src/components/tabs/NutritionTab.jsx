@@ -109,24 +109,30 @@ export default function NutritionTab({ state, dispatch }) {
   const handleSaveMeal = () => {
     if (!mealName) return alert('Please enter a meal name');
     
-    const meal = {
-      name: mealName,
-      calories: Number(macros.calories) || 0,
-      protein: Number(macros.protein) || 0,
-      carbs: Number(macros.carbs) || 0,
-      fat: Number(macros.fat) || 0,
-      photoUrl: photo,
-      loggedAt: new Date().toISOString(),
-    };
-
-    dispatch({ type: 'LOG_MEAL', payload: { mealDate: todayStr, meal } });
-    setMealName('');
-    setMacros({ calories: '', protein: '', carbs: '', fat: '' });
-    setPhoto(null);
-    setNotes('');
-    setHasAnalyzed(false);
-    setManualEntry(false);
-    setIsFormOpen(false);
+    try {
+      const meal = {
+        name: mealName,
+        calories: Number(macros.calories) || 0,
+        protein: Number(macros.protein) || 0,
+        carbs: Number(macros.carbs) || 0,
+        fat: Number(macros.fat) || 0,
+        photoUrl: photo,
+        loggedAt: new Date().toISOString(),
+      };
+    
+      dispatch({ type: 'LOG_MEAL', payload: { mealDate: todayStr, meal } });
+      setMealName('');
+      setMacros({ calories: '', protein: '', carbs: '', fat: '' });
+      setPhoto(null);
+      setNotes('');
+      setHasAnalyzed(false);
+      setManualEntry(false);
+    } catch (error) {
+      console.error('Failed to save meal:', error);
+      alert('An error occurred while saving the meal.');
+    } finally {
+      setIsFormOpen(false);
+    }
   };
 
   return (
