@@ -25,7 +25,7 @@ export function parseDayContent(content) {
     if (trimmed.includes(',') || trimmed.includes(';') || trimmed.includes('\n')) {
       exercises = trimmed.split(/[,;\n]/).map(cleanExercise).filter(ex => ex.length > 0);
     } else {
-      title = trimmed;
+      title = noLeadingColon;
     }
   }
 

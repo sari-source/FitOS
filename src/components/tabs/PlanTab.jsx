@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { parsePlan, parseDayContent } from '../../utils/planParser';
+import { parsePlan, parseDayContent, cleanExercise } from '../../utils/planParser';
 
 const DAYS_ORDER = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 const DEFAULT_COLORS = {
@@ -101,7 +101,7 @@ export default function PlanTab({ state, dispatch }) {
   };
 
   const saveExercise = () => {
-    const cleaned = newExerciseText.replace(/\s*\d+[sxX]\d+.*$/, '').replace(/\s*\d+\s*(sets?|reps?).*$/, '').trim();
+    const cleaned = cleanExercise(newExerciseText);
     if (!cleaned) return;
     const updated = [...editExercises];
     updated[editingExerciseIndex] = cleaned;
@@ -111,7 +111,7 @@ export default function PlanTab({ state, dispatch }) {
   };
 
   const addExercise = () => {
-    const cleaned = newExerciseText.replace(/\s*\d+[sxX]\d+.*$/, '').replace(/\s*\d+\s*(sets?|reps?).*$/, '').trim();
+    const cleaned = cleanExercise(newExerciseText);
     if (!cleaned) return;
     setEditExercises([...editExercises, cleaned]);
     setNewExerciseText('');

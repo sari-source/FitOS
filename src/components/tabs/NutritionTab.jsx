@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { formatDate } from '../../utils/dateUtils';
 import { useMacros } from '../../hooks/useMacros';
 import MacroBar from '../shared/MacroBar';
@@ -18,14 +18,30 @@ export default function NutritionTab({ state, dispatch }) {
   const [showPhotoOptions, setShowPhotoOptions] = useState(false);
   const [manualEntry, setManualEntry] = useState(false);
   const [notes, setNotes] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
 
   useEffect(() => {
     dispatch({ type: 'SET_POPUP_STATE', payload: isFormOpen });
   }, [isFormOpen, dispatch]);
 
-  const handlePhotoChange = async (e) => {
+  useEffect(() => {
+    if (!errorMsg) return;
+    const timer = setTimeout(() => setErrorMsg(''), 4000);
+    return () => clearTimeout(timer);
+  }, [errorMsg]);
+
+  const handlePhotoChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setErrorMsg('INVALID FILE TYPE. PLEASE SELECT AN IMAGE.');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setErrorMsg('IMAGE TOO LARGE. MAX 10MB.');
+      return;
+    }
 
     const reader = new FileReader();
     reader.onload = (event) => {
@@ -36,6 +52,7 @@ export default function NutritionTab({ state, dispatch }) {
 
   const analyzePhoto = async () => {
     if (!photo) return;
+    setErrorMsg('');
     setIsAnalyzing(true);
     setHasAnalyzed(false);
     try {
@@ -46,29 +63,26 @@ export default function NutritionTab({ state, dispatch }) {
           contents: [
             {
               parts: [
-                { text: `You are a nutrition analysis API. Analyze the food image and return a STRICT JSON object with exactly these keys: "calories" (number), "protein" (number in grams), "carbs" (number in grams), "fat" (number in grams). Use 0 if a value cannot be determined. Do NOT include markdown, explanations, or code blocks. Only valid JSON.${notes ? `\n\nAdditional context provided by the user: "${notes}". Use this to refine portion size estimates and cooking method adjustments.` : ''}` },
+                { text: `Analyze the food image. Output the nutrition data as exactly one line with 4 comma-separated numbers: calories,proteinGrams,carbsGrams,fatGrams. Use 0 if unknown. Example: 450,30,40,12. Do NOT include any other text or explanations. Only the numbers.${notes ? `\n\nAdditional context: "${notes}".` : ''}` },
                 { 
                   inline_data: { 
-                    mime_type: 'image/jpeg', 
+                    mime_type: photo.split(';')[0].split(':')[1], 
                     data: photo.split(',')[1] 
                   } 
                 }
               ]
             }
-          ],
-          generationConfig: {
-            response_mime_type: "application/json"
-          }
+          ]
         })
       });
 
       if (!response.ok) {
         const errData = await response.json().catch(() => ({}));
-        throw new Error(errData.error || 'Scan failed');
+        const snippet = errData._debug?.rawSnippet ? ` (raw: "${errData._debug.rawSnippet}")` : '';
+        throw new Error((errData.error || 'Scan failed') + snippet);
       }
 
       const data = await response.json();
-      console.log('AI Raw Response:', data);
       
       const candidate = data.candidates?.[0];
       if (!candidate) throw new Error('AI returned no candidates');
@@ -81,7 +95,8 @@ export default function NutritionTab({ state, dispatch }) {
       const endIdx = content.lastIndexOf('}');
       
       if (startIdx === -1 || endIdx === -1) {
-        throw new Error('No JSON found in response');
+        const snippet = data._debug?.rawSnippet || content.slice(0, 100);
+        throw new Error(`No JSON found in response (raw: "${snippet}")`);
       }
       
       const jsonString = content.substring(startIdx, endIdx + 1);
@@ -95,12 +110,7 @@ export default function NutritionTab({ state, dispatch }) {
       });
       setHasAnalyzed(true);
     } catch (error) {
-      console.error('Analysis failed:', error);
-      const errorMsg = document.createElement('div');
-      errorMsg.className = 'fixed top-10 left-1/2 -translate-x-1/2 bg-red-600 text-white px-4 py-2 rounded-full shadow-lg z-50 font-bold text-xs uppercase';
-      errorMsg.innerText = `ANALYSIS FAILED: ${error.message.toUpperCase()}`;
-      document.body.appendChild(errorMsg);
-      setTimeout(() => document.body.removeChild(errorMsg), 4000);
+      setErrorMsg(`ANALYSIS FAILED: ${error.message}`);
     } finally {
       setIsAnalyzing(false);
     }
@@ -181,6 +191,11 @@ export default function NutritionTab({ state, dispatch }) {
             onClick={e => e.stopPropagation()}
           >
             <h3 className="text-display text-3xl text-white mb-8 italic">ADD INTAKE</h3>
+            {errorMsg && (
+              <div className="mb-6 p-4 bg-red-600 text-white font-bold text-xs uppercase tracking-widest text-center animate-fade-in">
+                {errorMsg}
+              </div>
+            )}
             
             <div className="space-y-6">
               <div>

@@ -1,4 +1,4 @@
-const KEYS = {
+export const STORAGE_KEYS = {
   PROFILE: 'fitos_profile',
   MACROS: 'fitos_macros',
   PLAN: 'fitos_plan',
@@ -9,8 +9,12 @@ const KEYS = {
 
 export const storage = {
   get: (key) => {
-    const data = localStorage.getItem(key);
-    return data ? JSON.parse(data) : null;
+    try {
+      const data = localStorage.getItem(key);
+      return data ? JSON.parse(data) : null;
+    } catch {
+      return null;
+    }
   },
   set: (key, value) => {
     localStorage.setItem(key, JSON.stringify(value));
@@ -18,5 +22,5 @@ export const storage = {
   clear: (key) => {
     localStorage.removeItem(key);
   },
-  getKeys: () => KEYS,
+  getKeys: () => STORAGE_KEYS,
 };

@@ -31,6 +31,16 @@ function fillField(container, labelText, value) {
   return input
 }
 
+function clickNavTab(tabText) {
+  const navButtons = document.querySelectorAll('nav button')
+  for (const btn of navButtons) {
+    if (btn.textContent.includes(tabText)) {
+      fireEvent.click(btn)
+      return
+    }
+  }
+}
+
 // =====================
 // APP
 // =====================
@@ -39,7 +49,7 @@ describe('App', () => {
   it('shows nav bar', () => { const { container } = render(<App />); expect(container.querySelector('nav')).not.toBeNull() })
   it('shows 5 tabs', () => { render(<App />); expect(document.querySelectorAll('nav button').length).toBe(5) })
   it('defaults to profile', () => { render(<App />); expect(screen.getByText(/OPERATOR/i)).toBeInTheDocument() })
-  it('switches to plan', () => { render(<App />); fireEvent.click(screen.getByText(/PLAN/i)); expect(screen.getByText(/STRATEGY/i)).toBeInTheDocument() })
+  it('switches to plan', () => { render(<App />); clickNavTab('Plan'); expect(screen.getByText(/STRATEGY/i)).toBeInTheDocument() })
   it('switches to calendar', () => { render(<App />); fireEvent.click(screen.getByText(/CALENDAR/i)); expect(screen.getByText(/calendar/i)).toBeInTheDocument() })
   it('switches to nutrition', () => { render(<App />); fireEvent.click(screen.getByText(/NUTRITION/i)); expect(screen.getByText(/FUEL/i)).toBeInTheDocument() })
   it('switches to log', () => { render(<App />); fireEvent.click(screen.getByText(/LOG/i)); expect(screen.getByText(/PERFORMANCE/i)).toBeInTheDocument() })
@@ -108,32 +118,32 @@ describe('Profile Tab', () => {
 describe('Plan Tab', () => {
   it('shows input textarea', () => {
     render(<App />)
-    fireEvent.click(screen.getByText(/PLAN/i))
+    clickNavTab('Plan')
     expect(screen.getByText(/Input Raw Plan Data/i)).toBeInTheDocument()
   })
   it('parses plan and shows days', () => {
     render(<App />)
-    fireEvent.click(screen.getByText(/PLAN/i))
+    clickNavTab('Plan')
     const textarea = screen.getByPlaceholderText(/Monday/i)
     fireEvent.input(textarea, { target: { value: 'Monday: Chest\nExercise 1: Bench Press\nTuesday: Back\nExercise 1: Deadlift' } })
     fireEvent.click(screen.getByText(/EXECUTE PARSER/i))
     expect(screen.getByText(/Deployed Plan/i)).toBeInTheDocument()
-    expect(screen.getByText('Monday')).toBeInTheDocument()
-    expect(screen.getByText('Tuesday')).toBeInTheDocument()
+    expect(screen.getByText('Chest')).toBeInTheDocument()
+    expect(screen.getByText('Back')).toBeInTheDocument()
   })
   it('days sort correctly (Mon before Wed before Fri)', () => {
     render(<App />)
-    fireEvent.click(screen.getByText(/PLAN/i))
+    clickNavTab('Plan')
     const textarea = screen.getByPlaceholderText(/Monday/i)
     fireEvent.input(textarea, { target: { value: 'Friday: Legs\nEx: Squat\nMonday: Chest\nEx: Bench\nWednesday: Back\nEx: Deadlift' } })
     fireEvent.click(screen.getByText(/EXECUTE PARSER/i))
-    const days = screen.getAllByText(/^(Monday|Wednesday|Friday)$/)
-    const texts = days.map(d => d.textContent)
-    expect(texts).toEqual(['Monday', 'Wednesday', 'Friday'])
+    const titles = screen.getAllByText(/^(Legs|Chest|Back)$/)
+    const texts = titles.map(d => d.textContent)
+    expect(texts).toEqual(['Chest', 'Back', 'Legs'])
   })
   it('shows add day button', () => {
     render(<App />)
-    fireEvent.click(screen.getByText(/PLAN/i))
+    clickNavTab('Plan')
     const textarea = screen.getByPlaceholderText(/Monday/i)
     fireEvent.input(textarea, { target: { value: 'Monday: Chest\nEx: Bench' } })
     fireEvent.click(screen.getByText(/EXECUTE PARSER/i))
@@ -141,28 +151,25 @@ describe('Plan Tab', () => {
   })
   it('can expand and edit a day', () => {
     render(<App />)
-    fireEvent.click(screen.getByText(/PLAN/i))
+    clickNavTab('Plan')
     const textarea = screen.getByPlaceholderText(/Monday/i)
     fireEvent.input(textarea, { target: { value: 'Monday: Chest\nEx: Bench Press' } })
     fireEvent.click(screen.getByText(/EXECUTE PARSER/i))
-    // Expand the day card
-    const dayBtn = screen.getByText('Monday').closest('button')
+    const dayBtn = screen.getByText('Chest').closest('button')
     fireEvent.click(dayBtn)
-    // Now Edit button should be visible
     expect(screen.getByText('Edit')).toBeInTheDocument()
   })
   it('can delete a day', () => {
     render(<App />)
-    fireEvent.click(screen.getByText(/PLAN/i))
+    clickNavTab('Plan')
     const textarea = screen.getByPlaceholderText(/Monday/i)
     fireEvent.input(textarea, { target: { value: 'Monday: Chest\nEx: Bench Press' } })
     fireEvent.click(screen.getByText(/EXECUTE PARSER/i))
-    // Expand to reveal delete button
-    const dayBtn = screen.getByText('Monday').closest('button')
+    const dayBtn = screen.getByText('Chest').closest('button')
     fireEvent.click(dayBtn)
-    expect(screen.getByText('Monday')).toBeInTheDocument()
+    expect(screen.getByText('Chest')).toBeInTheDocument()
     fireEvent.click(screen.getAllByText('Delete')[0])
-    expect(screen.queryByText('Monday')).not.toBeInTheDocument()
+    expect(screen.queryByText('Chest')).not.toBeInTheDocument()
   })
 })
 
@@ -173,22 +180,22 @@ describe('Navigation visibility', () => {
   it('nav visible by default', () => { const { container } = render(<App />); expect(container.querySelector('nav')).not.toBeNull() })
   it('nav hides on popup', () => {
     const { container } = render(<App />)
-    fireEvent.click(screen.getByText(/PLAN/i))
+    clickNavTab('Plan')
     const textarea = screen.getByPlaceholderText(/Monday/i)
     fireEvent.input(textarea, { target: { value: 'Monday: Chest\nEx: Bench' } })
     fireEvent.click(screen.getByText(/EXECUTE PARSER/i))
-    const dayBtn = screen.getByText('Monday').closest('button')
+    const dayBtn = screen.getByText('Chest').closest('button')
     fireEvent.click(dayBtn)
     fireEvent.click(screen.getAllByText('Edit')[0])
     expect(container.querySelector('nav')).toBeNull()
   })
   it('body overflow hidden on popup', () => {
     render(<App />)
-    fireEvent.click(screen.getByText(/PLAN/i))
+    clickNavTab('Plan')
     const textarea = screen.getByPlaceholderText(/Monday/i)
     fireEvent.input(textarea, { target: { value: 'Monday: Chest\nEx: Bench' } })
     fireEvent.click(screen.getByText(/EXECUTE PARSER/i))
-    const dayBtn = screen.getByText('Monday').closest('button')
+    const dayBtn = screen.getByText('Chest').closest('button')
     fireEvent.click(dayBtn)
     fireEvent.click(screen.getAllByText('Edit')[0])
     expect(document.body.style.overflow).toBe('hidden')
@@ -246,7 +253,7 @@ describe('Log Tab', () => {
   it('shows commit button', () => { render(<App />); fireEvent.click(screen.getByText(/LOG/i)); expect(screen.getByText(/COMMIT LOG/i)).toBeInTheDocument() })
   it('logs to localStorage', () => {
     render(<App />)
-    fireEvent.click(screen.getByText(/PLAN/i))
+    clickNavTab('Plan')
     const textarea = screen.getByPlaceholderText(/Monday/i)
     const dayName = new Date().toLocaleDateString('en-US', { weekday: 'long' })
     fireEvent.input(textarea, { target: { value: `${dayName}: Bench Press\nEx: Bench Press` } })
@@ -267,7 +274,7 @@ describe('Log Tab', () => {
 describe('Plan History Snapshots', () => {
   it('snapshot on plan change', () => {
     render(<App />)
-    fireEvent.click(screen.getByText(/PLAN/i))
+    clickNavTab('Plan')
     const textarea = screen.getByPlaceholderText(/Monday/i)
     fireEvent.input(textarea, { target: { value: 'Monday: Chest\nEx: Bench' } })
     fireEvent.click(screen.getByText(/EXECUTE PARSER/i))

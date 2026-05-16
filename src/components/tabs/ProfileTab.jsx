@@ -4,6 +4,25 @@ import MacroCards from '../shared/MacroCards';
 import MacroBar from '../shared/MacroBar';
 import { useMacros } from '../../hooks/useMacros';
 
+const INPUT_STYLE = "w-full p-4 bg-zinc-900 text-white border border-zinc-800 rounded-none outline-none text-mono text-sm focus:border-accent transition-colors";
+const LABEL_STYLE = "block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2";
+
+const ACTIVITY_OPTIONS = [
+  { value: 1.2, label: 'Sedentary' },
+  { value: 1.375, label: 'Lightly Active' },
+  { value: 1.55, label: 'Moderately Active' },
+  { value: 1.725, label: 'Very Active' },
+  { value: 1.9, label: 'Extra Active' },
+];
+
+const GOAL_OPTIONS = [
+  { value: 'bulk', label: 'Bulk' },
+  { value: 'lean_bulk', label: 'Lean Bulk' },
+  { value: 'maintain', label: 'Maintain' },
+  { value: 'cut', label: 'Cut' },
+  { value: 'agg_cut', label: 'Aggressive Cut' },
+];
+
 export default function ProfileTab({ state, dispatch, setActiveTab }) {
   const [formData, setFormData] = useState(state.profile || {
     weight: '',
@@ -27,24 +46,6 @@ export default function ProfileTab({ state, dispatch, setActiveTab }) {
       alert('Please fill in all fields correctly.');
     }
   };
-
-  const inputStyle = "w-full p-4 bg-zinc-900 text-white border border-zinc-800 rounded-none outline-none text-mono text-sm focus:border-accent transition-colors";
-  const labelStyle = "block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2";
-
-  const activityOptions = [
-    { value: 1.2, label: 'Sedentary' },
-    { value: 1.375, label: 'Lightly Active' },
-    { value: 1.55, label: 'Moderately Active' },
-    { value: 1.725, label: 'Very Active' },
-    { value: 1.9, label: 'Extra Active' },
-  ];
-  const goalOptions = [
-    { value: 'bulk', label: 'Bulk' },
-    { value: 'lean_bulk', label: 'Lean Bulk' },
-    { value: 'maintain', label: 'Maintain' },
-    { value: 'cut', label: 'Cut' },
-    { value: 'agg_cut', label: 'Aggressive Cut' },
-  ];
 
   const todayDayName = today.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
   const todayPlan = state.plan[todayDayName];
@@ -75,37 +76,37 @@ export default function ProfileTab({ state, dispatch, setActiveTab }) {
           <div className="grid grid-cols-1 gap-6 mb-10">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className={labelStyle}>Weight (kg)</label>
+                <label className={LABEL_STYLE}>Weight (kg)</label>
                 <input
                   type="number"
-                  className={inputStyle}
+                  className={INPUT_STYLE}
                   value={formData.weight}
                   onChange={e => setFormData({...formData, weight: Number(e.target.value)})}
                 />
               </div>
               <div>
-                <label className={labelStyle}>Height (cm)</label>
+                <label className={LABEL_STYLE}>Height (cm)</label>
                 <input
                   type="number"
-                  className={inputStyle}
+                  className={INPUT_STYLE}
                   value={formData.height}
                   onChange={e => setFormData({...formData, height: Number(e.target.value)})}
                 />
               </div>
             </div>
             <div>
-              <label className={labelStyle}>Age</label>
+              <label className={LABEL_STYLE}>Age</label>
               <input
                 type="number"
-                className={inputStyle}
+                className={INPUT_STYLE}
                 value={formData.age}
                 onChange={e => setFormData({...formData, age: Number(e.target.value)})}
               />
             </div>
             <div>
-              <label className={labelStyle}>Sex</label>
+              <label className={LABEL_STYLE}>Sex</label>
               <select
-                className={inputStyle}
+                className={INPUT_STYLE}
                 value={formData.sex}
                 onChange={e => setFormData({...formData, sex: e.target.value})}
               >
@@ -114,25 +115,25 @@ export default function ProfileTab({ state, dispatch, setActiveTab }) {
               </select>
             </div>
             <div>
-              <label className={labelStyle}>Activity Level</label>
+              <label className={LABEL_STYLE}>Activity Level</label>
               <select
-                className={inputStyle}
+                className={INPUT_STYLE}
                 value={formData.activityLevel}
                 onChange={e => setFormData({...formData, activityLevel: Number(e.target.value)})}
               >
-                {activityOptions.map(opt => (
+                {ACTIVITY_OPTIONS.map(opt => (
                   <option key={opt.value} value={opt.value}>{opt.label}</option>
                 ))}
               </select>
             </div>
             <div>
-              <label className={labelStyle}>Primary Goal</label>
+              <label className={LABEL_STYLE}>Primary Goal</label>
               <select
-                className={inputStyle}
+                className={INPUT_STYLE}
                 value={formData.goal}
                 onChange={e => setFormData({...formData, goal: e.target.value})}
               >
-                {goalOptions.map(opt => (
+                {GOAL_OPTIONS.map(opt => (
                   <option key={opt.value} value={opt.value}>{opt.label}</option>
                 ))}
               </select>
@@ -182,7 +183,7 @@ export default function ProfileTab({ state, dispatch, setActiveTab }) {
               </div>
               <div className="text-mono text-xs text-zinc-500 space-y-1">
                 <div>{state.profile.weight} kg · {state.profile.height} cm · {state.profile.age}y</div>
-                <div>{state.profile.sex} · {activityOptions.find(o => o.value === state.profile.activityLevel)?.label} · {goalOptions.find(o => o.value === state.profile.goal)?.label}</div>
+                <div>{state.profile.sex} · {ACTIVITY_OPTIONS.find(o => o.value === state.profile.activityLevel)?.label} · {GOAL_OPTIONS.find(o => o.value === state.profile.goal)?.label}</div>
               </div>
             </div>
           )}

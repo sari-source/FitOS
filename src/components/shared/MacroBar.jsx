@@ -1,5 +1,3 @@
-import React from 'react';
-
 const COLORS = {
   calories: 'var(--color-accent)',
   protein: '#3b82f6',
