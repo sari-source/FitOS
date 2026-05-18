@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import App from '../App'
 import { storage } from '../utils/storage'
+import { formatDate } from '../utils/dateUtils'
 
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
@@ -39,6 +40,13 @@ function clickNavTab(tabText) {
       return
     }
   }
+}
+
+function loadPlan(text) {
+  clickNavTab('Plan')
+  const textarea = screen.getByPlaceholderText(/Monday/i)
+  fireEvent.input(textarea, { target: { value: text } })
+  fireEvent.click(screen.getByText(/EXECUTE PARSER/i))
 }
 
 // =====================
@@ -110,6 +118,30 @@ describe('Profile Tab', () => {
     rerender(<App />)
     expect(screen.getByText(/Edit/i)).toBeInTheDocument()
   })
+
+  it('alerts when calculating with incomplete profile', () => {
+    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {})
+    render(<App />)
+    fireEvent.click(screen.getByText(/CALCULATE TARGETS/i))
+    expect(alertSpy).toHaveBeenCalledWith('Please fill in all fields correctly.')
+    alertSpy.mockRestore()
+  })
+
+  it('edit button returns to the profile form', () => {
+    const { container } = render(<App />)
+    fillField(container, 'Weight', '80')
+    fillField(container, 'Height', '180')
+    fillField(container, 'Age', '25')
+    fireEvent.click(screen.getByText(/CALCULATE TARGETS/i))
+    fireEvent.click(screen.getByText(/Edit/i))
+    expect(screen.getByText(/Weight \(kg\)/i)).toBeInTheDocument()
+  })
+
+  it('today plan button opens the calendar day sheet', () => {
+    render(<App />)
+    fireEvent.click(screen.getByText(/Today's Plan/i).closest('button'))
+    expect(screen.getByText(/Daily Report/i)).toBeInTheDocument()
+  })
 })
 
 // =====================
@@ -171,6 +203,47 @@ describe('Plan Tab', () => {
     fireEvent.click(screen.getAllByText('Delete')[0])
     expect(screen.queryByText('Chest')).not.toBeInTheDocument()
   })
+
+  it('can cancel add day modal', () => {
+    render(<App />)
+    loadPlan('Monday: Chest\nEx: Bench Press')
+    fireEvent.click(screen.getByText('Add Day'))
+    expect(screen.getByText('ADD DAY')).toBeInTheDocument()
+    fireEvent.click(screen.getByText('CANCEL'))
+    expect(screen.queryByText('ADD DAY')).not.toBeInTheDocument()
+  })
+
+  it('can add a new day with exercises', () => {
+    const { container } = render(<App />)
+    loadPlan('Monday: Chest\nEx: Bench Press')
+    fireEvent.click(screen.getByText('Add Day'))
+    expect(screen.getByText('SAVE DAY').closest('button')).toBeDisabled()
+
+    fireEvent.change(getInputByLabel(container, 'Day Name'), { target: { value: 'tuesday' } })
+    fireEvent.input(screen.getByPlaceholderText(/Push Day/i), { target: { value: 'Legs' } })
+    fireEvent.input(screen.getByPlaceholderText(/Bench Press, Incline/i), { target: { value: 'Squat, Leg Press' } })
+    fireEvent.click(screen.getByText('SAVE DAY'))
+
+    expect(screen.getByText('Legs')).toBeInTheDocument()
+    expect(screen.getByText('Squat')).toBeInTheDocument()
+    expect(screen.getByText('Leg Press')).toBeInTheDocument()
+  })
+
+  it('can edit a day title, color, and exercises', () => {
+    const { container } = render(<App />)
+    loadPlan('Monday: Chest\nEx: Bench Press\nEx: Cable Flyes')
+    fireEvent.click(screen.getByText('Chest').closest('button'))
+    fireEvent.click(screen.getAllByText('Edit')[0])
+
+    fireEvent.input(screen.getByPlaceholderText(/Upper Body/i), { target: { value: 'Push Updated' } })
+    fireEvent.change(container.querySelector('input[type="color"]'), { target: { value: '#00ff00' } })
+    fireEvent.input(screen.getByPlaceholderText(/Exercise name/i), { target: { value: 'Dips 3x10' } })
+    fireEvent.click(screen.getAllByText('+').at(-1))
+    fireEvent.click(screen.getByText('SAVE'))
+
+    expect(screen.getByText('Push Updated')).toBeInTheDocument()
+    expect(screen.getByText('Dips')).toBeInTheDocument()
+  })
 })
 
 // =====================
@@ -210,6 +283,21 @@ describe('Calendar Tab', () => {
   it('shows day headers', () => { render(<App />); fireEvent.click(screen.getByText(/CALENDAR/i)); expect(screen.getByText('SU')).toBeInTheDocument() })
   it('renders day cells', () => { render(<App />); fireEvent.click(screen.getByText(/CALENDAR/i)); expect(screen.getByText('1')).toBeInTheDocument() })
   it('navigates months', () => { render(<App />); fireEvent.click(screen.getByText(/CALENDAR/i)); fireEvent.click(screen.getByText('←')); expect(screen.getByText(/\w+ 20\d{2}/)).toBeInTheDocument() })
+  it('opens and closes a day report', () => {
+    const { container } = render(<App />)
+    fireEvent.click(screen.getByText(/CALENDAR/i))
+    fireEvent.click(screen.getByText('1'))
+    expect(screen.getByText(/Daily Report/i)).toBeInTheDocument()
+    fireEvent.click(container.querySelector('.fixed.bottom-0 .w-16'))
+    expect(screen.queryByText(/Daily Report/i)).not.toBeInTheDocument()
+  })
+  it('next month button navigates forward', () => {
+    render(<App />)
+    fireEvent.click(screen.getByText(/CALENDAR/i))
+    const before = screen.getByText(/\w+ 20\d{2}/).textContent
+    fireEvent.click(screen.getByText('→'))
+    expect(screen.getByText(/\w+ 20\d{2}/).textContent).not.toBe(before)
+  })
 })
 
 // =====================
@@ -242,6 +330,57 @@ describe('Nutrition Tab', () => {
     expect(screen.getByText('CALORIES')).toBeInTheDocument()
     expect(screen.getByText('PROTEIN')).toBeInTheDocument()
   })
+
+  it('can cancel meal entry modal', () => {
+    render(<App />)
+    fireEvent.click(screen.getByText(/NUTRITION/i))
+    fireEvent.click(screen.getByText('+'))
+    expect(screen.getByText('ADD INTAKE')).toBeInTheDocument()
+    fireEvent.click(screen.getByText('CANCEL'))
+    expect(screen.queryByText('ADD INTAKE')).not.toBeInTheDocument()
+  })
+
+  it('can save a manual meal entry', () => {
+    render(<App />)
+    fireEvent.click(screen.getByText(/NUTRITION/i))
+    fireEvent.click(screen.getByText('+'))
+    fireEvent.input(screen.getByPlaceholderText(/POST-WORKOUT/i), { target: { value: 'Dinner' } })
+    fireEvent.click(screen.getByText('Manual Entry'))
+
+    const inputs = screen.getAllByRole('spinbutton')
+    fireEvent.input(inputs[0], { target: { value: '700' } })
+    fireEvent.input(inputs[1], { target: { value: '45' } })
+    fireEvent.input(inputs[2], { target: { value: '80' } })
+    fireEvent.input(inputs[3], { target: { value: '20' } })
+    fireEvent.click(screen.getByText('SAVE ENTRY'))
+
+    expect(screen.getByText('Dinner')).toBeInTheDocument()
+    expect(storage.get(storage.getKeys().MEALS)[formatDate(new Date())][0]).toEqual(expect.objectContaining({
+      name: 'Dinner', calories: 700, protein: 45, carbs: 80, fat: 20,
+    }))
+  })
+
+  it('requires meal name before saving', () => {
+    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {})
+    render(<App />)
+    fireEvent.click(screen.getByText(/NUTRITION/i))
+    fireEvent.click(screen.getByText('+'))
+    fireEvent.click(screen.getByText('Manual Entry'))
+    fireEvent.click(screen.getByText('SAVE ENTRY'))
+    expect(alertSpy).toHaveBeenCalledWith('Please enter a meal name')
+    alertSpy.mockRestore()
+  })
+
+  it('shows and cancels photo source options', () => {
+    render(<App />)
+    fireEvent.click(screen.getByText(/NUTRITION/i))
+    fireEvent.click(screen.getByText('+'))
+    fireEvent.click(screen.getByText('Add Photo'))
+    expect(screen.getByText('Take Photo')).toBeInTheDocument()
+    expect(screen.getByText('Upload Image')).toBeInTheDocument()
+    fireEvent.click(screen.getByText('Cancel'))
+    expect(screen.queryByText('Take Photo')).not.toBeInTheDocument()
+  })
 })
 
 // =====================
@@ -265,6 +404,54 @@ describe('Log Tab', () => {
     expect(screen.getByText(/ENTRY COMMITTED/i)).toBeInTheDocument()
     const keys = storage.getKeys()
     expect(storage.get(keys.LOGS)).not.toBeNull()
+  })
+
+  it('alerts if committing without an exercise', () => {
+    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {})
+    render(<App />)
+    fireEvent.click(screen.getByText(/LOG/i))
+    fireEvent.click(screen.getByText(/COMMIT LOG/i))
+    expect(alertSpy).toHaveBeenCalledWith('Please select an exercise')
+    alertSpy.mockRestore()
+  })
+
+  it('updates matching set number and keeps different set numbers', () => {
+    const todayStr = formatDate(new Date())
+    render(<App />)
+    clickNavTab('Plan')
+    const textarea = screen.getByPlaceholderText(/Monday/i)
+    const dayName = new Date().toLocaleDateString('en-US', { weekday: 'long' })
+    fireEvent.input(textarea, { target: { value: `${dayName}: Bench Press\nEx: Bench Press` } })
+    fireEvent.click(screen.getByText(/EXECUTE PARSER/i))
+    fireEvent.click(screen.getByText(/LOG/i))
+
+    const select = screen.getByRole('combobox')
+    const inputs = screen.getAllByRole('spinbutton')
+
+    fireEvent.change(select, { target: { value: 'Bench Press' } })
+    fireEvent.change(inputs[0], { target: { value: '1' } })
+    fireEvent.change(inputs[1], { target: { value: '8' } })
+    fireEvent.change(inputs[2], { target: { value: '60' } })
+    fireEvent.click(screen.getByText(/COMMIT LOG/i))
+
+    fireEvent.change(select, { target: { value: 'Bench Press' } })
+    fireEvent.change(inputs[0], { target: { value: '1' } })
+    fireEvent.change(inputs[1], { target: { value: '9' } })
+    fireEvent.change(inputs[2], { target: { value: '60' } })
+    fireEvent.click(screen.getByText(/COMMIT LOG/i))
+
+    fireEvent.change(select, { target: { value: 'Bench Press' } })
+    fireEvent.change(inputs[0], { target: { value: '2' } })
+    fireEvent.change(inputs[1], { target: { value: '7' } })
+    fireEvent.change(inputs[2], { target: { value: '60' } })
+    fireEvent.click(screen.getByText(/COMMIT LOG/i))
+
+    const logs = storage.get(storage.getKeys().LOGS)[todayStr]
+    expect(logs).toHaveLength(2)
+    expect(logs).toEqual(expect.arrayContaining([
+      expect.objectContaining({ exercise: 'Bench Press', sets: 1, reps: 9, weight: 60 }),
+      expect.objectContaining({ exercise: 'Bench Press', sets: 2, reps: 7, weight: 60 }),
+    ]))
   })
 })
 

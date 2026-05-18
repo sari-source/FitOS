@@ -68,7 +68,9 @@ async function callAI(body) {
         return { status: 200, data: toGoogleResponse(groqData) };
       }
       let errMsg = 'Groq API Error';
-      try { const e = await response.json(); errMsg = e.error?.message || JSON.stringify(e); } catch {}
+      try { const e = await response.json(); errMsg = e.error?.message || JSON.stringify(e); } catch {
+        // Keep the generic API error if the response body is not JSON.
+      }
       console.error('Groq failed:', errMsg);
       if (!googleKey) return { status: response.status, error: errMsg };
     } catch (e) {

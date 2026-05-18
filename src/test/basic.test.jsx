@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render } from '@testing-library/react'
 import { useMacros } from '../hooks/useMacros'
 import { calculateMacros } from '../utils/macroCalc'
-import { parsePlan } from '../utils/planParser'
+import { cleanExercise, parseDayContent, parsePlan } from '../utils/planParser'
 import { formatDate, getDayName, getDaysInMonth, getFirstDayOfMonth } from '../utils/dateUtils'
 import { storage } from '../utils/storage'
 import MacroBar from '../components/shared/MacroBar'
@@ -24,9 +24,6 @@ Object.defineProperty(window, 'matchMedia', {
     dispatchEvent: vi.fn(),
   })),
 })
-
-// Test wrapper for hooks
-import { useState } from 'react'
 
 function MacrosTestWrapper({ meals, macros, date }) {
   const { totals, targets } = useMacros(meals, macros, date)
@@ -58,10 +55,15 @@ describe('dateUtils', () => {
   it('gets days in month correctly', () => {
     expect(getDaysInMonth(2026, 0)).toBe(31) // January
     expect(getDaysInMonth(2026, 1)).toBe(28) // February
+    expect(getDaysInMonth(2028, 1)).toBe(29) // Leap year February
   })
 
   it('gets first day of month correctly', () => {
     expect(getFirstDayOfMonth(2026, 0)).toBe(4) // Jan 1, 2026 is Thursday
+  })
+
+  it('formats dates from strings and pads month/day', () => {
+    expect(formatDate('2026-03-04T12:00:00')).toBe('2026-03-04')
   })
 })
 
@@ -77,6 +79,11 @@ describe('storage', () => {
 
   it('returns null for missing keys', () => {
     expect(storage.get('fitos_nonexistent')).toBeNull()
+  })
+
+  it('returns null for invalid stored JSON', () => {
+    localStorage.setItem('broken', '{nope')
+    expect(storage.get('broken')).toBeNull()
   })
 
   it('clears data', () => {
@@ -124,6 +131,12 @@ describe('macroCalc', () => {
     expect(cut.calories).toBeLessThan(maintain.calories)
   })
 
+  it('calculates female profile and aggressive cut', () => {
+    const result = calculateMacros({ weight: 65, height: 165, age: 30, sex: 'female', activityLevel: 1.375, goal: 'agg_cut' })
+    expect(result.calories).toBeGreaterThan(0)
+    expect(result.protein).toBeGreaterThan(result.fat)
+  })
+
   it('returns null for incomplete profile', () => {
     expect(calculateMacros(null)).toBeNull()
     expect(calculateMacros({ weight: 80 })).toBeNull()
@@ -134,6 +147,22 @@ describe('macroCalc', () => {
 // PLAN PARSER
 // =====================
 describe('planParser', () => {
+  it('cleans exercise metadata', () => {
+    expect(cleanExercise('1. Bench Press 3x8 @ 60kg')).toBe('Bench Press')
+    expect(cleanExercise('- Squat (warm up) 4 sets')).toBe('Squat')
+  })
+
+  it('parses day content with title and exercises', () => {
+    expect(parseDayContent('Push: Bench Press, Shoulder Press')).toEqual({
+      title: 'Push',
+      exercises: ['Bench Press', 'Shoulder Press'],
+    })
+  })
+
+  it('parses rest day content', () => {
+    expect(parseDayContent('Off day')).toEqual({ title: 'Recovery', exercises: [] })
+  })
+
   it('parses simple plan text', () => {
     const text = 'Monday: Chest\nDetails: Bench Press, Incline DB Press'
     const plan = parsePlan(text)
@@ -159,6 +188,45 @@ describe('planParser', () => {
 
   it('returns empty object for empty text', () => {
     expect(parsePlan('')).toEqual({})
+  })
+
+  it('parses abbreviated weekdays with bullets and set details', () => {
+    const text = 'Mon - Push\n- Bench Press 3x8\n- Incline DB Press 3x10\nTue: Pull\n1. Deadlift 3x5'
+    const plan = parsePlan(text)
+    expect(plan.monday.title).toBe('Push')
+    expect(plan.monday.exercises).toEqual(['Bench Press', 'Incline DB Press'])
+    expect(plan.tuesday.title).toBe('Pull')
+    expect(plan.tuesday.exercises).toEqual(['Deadlift'])
+  })
+
+  it('parses exercise labels as exercises instead of titles', () => {
+    const text = 'Monday: Chest\nExercise 1: Bench Press\nEx 2: Cable Flyes'
+    const plan = parsePlan(text)
+    expect(plan.monday.title).toBe('Chest')
+    expect(plan.monday.exercises).toEqual(['Bench Press', 'Cable Flyes'])
+  })
+
+  it('merges duplicate days', () => {
+    const text = 'Monday: Chest\nExercise 1: Bench Press\nMon: Triceps\nExercise 2: Rope Pushdown'
+    const plan = parsePlan(text)
+    expect(Object.keys(plan)).toHaveLength(1)
+    expect(plan.monday.title).toBe('Triceps')
+    expect(plan.monday.exercises).toEqual(['Bench Press', 'Rope Pushdown'])
+  })
+
+  it('parses day number plans', () => {
+    const text = 'Day 1 - Push: Bench Press, Shoulder Press\nDay 2 - Recovery\nDay 3 - Legs\n- Squat 4x6'
+    const plan = parsePlan(text)
+    expect(plan.monday.exercises).toEqual(['Bench Press', 'Shoulder Press'])
+    expect(plan.tuesday.rest).toBe(true)
+    expect(plan.wednesday.title).toBe('Legs')
+    expect(plan.wednesday.exercises).toEqual(['Squat'])
+  })
+
+  it('ignores lines before the first day', () => {
+    const plan = parsePlan('Weekly plan\nNotes first\nFriday: Legs\n- Squat')
+    expect(Object.keys(plan)).toEqual(['friday'])
+    expect(plan.friday.exercises).toEqual(['Squat'])
   })
 })
 
@@ -201,6 +269,13 @@ describe('useMacros hook', () => {
     )
     expect(container.querySelector('[data-testid="target-calories"]').textContent).toBe('2500')
   })
+
+  it('ignores malformed meals data', () => {
+    const { container } = render(
+      <MacrosTestWrapper meals={[]} macros={null} date={new Date()} />
+    )
+    expect(container.querySelector('[data-testid="calories"]').textContent).toBe('0')
+  })
 })
 
 // =====================
@@ -217,6 +292,11 @@ describe('MacroBar', () => {
     const { container } = render(<MacroBar type="protein" current={120} target={180} />)
     expect(container.textContent).toContain('PROTEIN')
     expect(container.textContent).toContain('120 / 180 G')
+  })
+
+  it('renders unknown macro type without crashing', () => {
+    const { container } = render(<MacroBar type="calories" current={0} target={100} />)
+    expect(container.textContent).toContain('0 / 100 KCAL')
   })
 
   it('renders zero percentage when no target', () => {
@@ -269,6 +349,13 @@ describe('ExerciseRow', () => {
     const { container } = render(<ExerciseRow exercise="Bench Press" sets={sets} />)
     expect(container.textContent).toContain('Bench Press')
     expect(container.textContent).toContain('2 SETS')
+  })
+
+  it('renders individual logged set details', () => {
+    const sets = [{ sets: 1, reps: 8, weight: 60 }]
+    const { container } = render(<ExerciseRow exercise="Squat" sets={sets} />)
+    expect(container.textContent).toContain('1x8')
+    expect(container.textContent).toContain('60kg')
   })
 })
 

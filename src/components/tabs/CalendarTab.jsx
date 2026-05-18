@@ -52,7 +52,6 @@ export default function CalendarTab({ state, dispatch }) {
       const date = new Date(year, month, d);
       const dateStr = formatDate(date);
       const isToday = dateStr === todayStr;
-      const hasData = state.logs[dateStr] || state.meals[dateStr];
       
       const dayName = date.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
       const isPastDate = dateStr < todayStr;

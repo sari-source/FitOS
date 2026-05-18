@@ -8,7 +8,9 @@ function loadBaseline() {
   try {
     const stored = localStorage.getItem(BASELINE_KEY);
     if (stored) return JSON.parse(stored);
-  } catch {}
+  } catch {
+    // Ignore corrupted baseline data and rebuild it from current storage.
+  }
   
   const plan = storage.get(STORAGE_KEYS.PLAN) || {};
   const macros = storage.get(STORAGE_KEYS.MACROS);
@@ -99,18 +101,15 @@ function appReducer(state, action) {
     case 'LOG_SET': {
       const { date, entry } = action.payload;
       const updatedLogs = { ...state.logs };
-      if (!updatedLogs[date]) updatedLogs[date] = [];
-      
-      const existingIndex = updatedLogs[date].findIndex(
-        log => log.exercise === entry.exercise
+      const dayLogs = updatedLogs[date] || [];
+      const existingIndex = dayLogs.findIndex(
+        log => log.exercise === entry.exercise && log.sets === entry.sets
       );
 
       if (existingIndex > -1) {
-        const newLogs = [...updatedLogs[date]];
-        newLogs[existingIndex] = entry;
-        updatedLogs[date] = newLogs;
+        updatedLogs[date] = dayLogs.map((log, index) => index === existingIndex ? entry : log);
       } else {
-        updatedLogs[date] = [...updatedLogs[date], entry];
+        updatedLogs[date] = [...dayLogs, entry];
       }
       
       storage.set(STORAGE_KEYS.LOGS, updatedLogs);
