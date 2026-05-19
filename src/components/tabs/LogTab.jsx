@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { formatDate, getDayName } from '../../utils/dateUtils';
+import { getEffectiveStateForDate } from '../../utils/effectiveState';
 
 export default function LogTab({ state, dispatch }) {
   const today = new Date();
   const todayStr = formatDate(today);
   const dayName = getDayName(today);
-  const dayPlan = state.plan[dayName];
+  const { effectivePlan } = getEffectiveStateForDate({ ...state, date: today });
+  const dayPlan = effectivePlan[dayName];
   
   const [exerciseName, setExerciseName] = useState('');
   const [row, setRow] = useState({ sets: 3, reps: 8, weight: 60 });

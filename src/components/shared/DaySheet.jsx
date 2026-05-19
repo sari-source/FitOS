@@ -1,27 +1,11 @@
 import MacroBar from './MacroBar';
 import { formatDate } from '../../utils/dateUtils';
 import { useMacros } from '../../hooks/useMacros';
+import { getEffectiveStateForDate } from '../../utils/effectiveState';
 
 export default function DaySheet({ date, plan, logs, meals, macros, planHistory, baseline, onClose }) {
-  const todayStr = formatDate(new Date());
   const dateStr = formatDate(date);
-  const isPast = dateStr < todayStr;
-  
-  const getEffectiveState = () => {
-    if (!isPast) return { effectivePlan: plan, effectiveMacros: macros };
-    
-    const allSnaps = [...(planHistory || [])];
-    const relevant = allSnaps.filter(s => s.date <= dateStr);
-    
-    if (relevant.length > 0) {
-      const snap = relevant[relevant.length - 1];
-      return { effectivePlan: snap.plan, effectiveMacros: snap.macros };
-    }
-    
-    return { effectivePlan: baseline?.plan || plan, effectiveMacros: baseline?.macros || macros };
-  };
-  
-  const { effectivePlan, effectiveMacros } = getEffectiveState();
+  const { effectivePlan, effectiveMacros } = getEffectiveStateForDate({ date, plan, macros, logs, planHistory, baseline });
   const { totals: effectiveTotals } = useMacros(meals, effectiveMacros, date);
   
   const dayPlan = effectivePlan[new Date(date).toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase()];

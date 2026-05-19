@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getDaysInMonth, getFirstDayOfMonth, formatDate } from '../../utils/dateUtils';
+import { getEffectiveStateForDate } from '../../utils/effectiveState';
 import DaySheet from '../shared/DaySheet';
 
 const DEFAULT_COLORS = {
@@ -54,24 +55,11 @@ export default function CalendarTab({ state, dispatch }) {
       const isToday = dateStr === todayStr;
       
       const dayName = date.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
-      const isPastDate = dateStr < todayStr;
-      let hasPlan = false;
-       let dotColor = DEFAULT_COLORS[dayName] || "var(--accent)";
-       if (isPastDate) {
-         const allSnaps = [...(state.planHistory || [])];
-         const relevant = allSnaps.filter(s => s.date <= dateStr);
-         if (relevant.length > 0) {
-           const snap = relevant[relevant.length - 1];
-           hasPlan = snap.plan[dayName] && !snap.plan[dayName].rest;
-           if (hasPlan) dotColor = snap.plan[dayName].color || DEFAULT_COLORS[dayName] || "var(--accent)";
-         } else if (state.baseline) {
-           hasPlan = state.baseline.plan[dayName] && !state.baseline.plan[dayName]?.rest;
-           if (hasPlan) dotColor = state.baseline.plan[dayName].color || DEFAULT_COLORS[dayName] || "var(--accent)";
-         }
-       } else {
-         hasPlan = state.plan[dayName] && !state.plan[dayName].rest;
-         if (hasPlan) dotColor = state.plan[dayName].color || DEFAULT_COLORS[dayName] || "var(--accent)";
-       }
+      let dotColor = DEFAULT_COLORS[dayName] || "var(--accent)";
+      const { effectivePlan } = getEffectiveStateForDate({ ...state, date });
+      const dayPlan = effectivePlan[dayName];
+      const hasPlan = dayPlan && !dayPlan.rest;
+      if (hasPlan) dotColor = dayPlan.color || DEFAULT_COLORS[dayName] || "var(--accent)";
 
       let styles = "bg-zinc-900 text-zinc-500";
       if (isToday) styles = "bg-accent text-black font-black";

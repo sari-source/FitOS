@@ -387,9 +387,52 @@ describe('Nutrition Tab', () => {
 // LOG TAB
 // =====================
 describe('Log Tab', () => {
+  const buildPlan = (day, title, exercise) => ({
+    [day]: { rest: false, title, exercises: [exercise] },
+  })
+
   it('shows header', () => { render(<App />); fireEvent.click(screen.getByText(/LOG/i)); expect(screen.getByText(/PERFORMANCE/i)).toBeInTheDocument() })
   it('shows inputs', () => { render(<App />); fireEvent.click(screen.getByText(/LOG/i)); expect(screen.getByText('Sets')).toBeInTheDocument() })
   it('shows commit button', () => { render(<App />); fireEvent.click(screen.getByText(/LOG/i)); expect(screen.getByText(/COMMIT LOG/i)).toBeInTheDocument() })
+  it('shows updated workout for today when no sets are logged', () => {
+    const today = new Date()
+    const todayStr = formatDate(today)
+    const day = today.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase()
+    const oldPlan = buildPlan(day, 'Old Workout', 'Old Lift')
+    const currentPlan = buildPlan(day, 'Current Workout', 'Current Lift')
+
+    storage.set(storage.getKeys().PLAN, currentPlan)
+    storage.set(storage.getKeys().PLAN_HISTORY, [{ date: todayStr, plan: oldPlan, macros: null }])
+    localStorage.setItem('fitos_baseline', JSON.stringify({ plan: oldPlan, macros: null }))
+
+    render(<App />)
+    fireEvent.click(screen.getByText(/LOG/i))
+
+    expect(screen.getByText('Current Lift')).toBeInTheDocument()
+    expect(screen.queryByText('Old Lift')).not.toBeInTheDocument()
+  })
+
+  it('keeps today workout frozen after sets are logged', () => {
+    const today = new Date()
+    const todayStr = formatDate(today)
+    const day = today.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase()
+    const loggedPlan = buildPlan(day, 'Logged Workout', 'Logged Lift')
+    const currentPlan = buildPlan(day, 'Current Workout', 'Current Lift')
+
+    storage.set(storage.getKeys().PLAN, currentPlan)
+    storage.set(storage.getKeys().LOGS, {
+      [todayStr]: [{ exercise: 'Logged Lift', sets: 1, reps: 8, weight: 60 }],
+    })
+    storage.set(storage.getKeys().PLAN_HISTORY, [{ date: todayStr, plan: loggedPlan, macros: null }])
+    localStorage.setItem('fitos_baseline', JSON.stringify({ plan: loggedPlan, macros: null }))
+
+    render(<App />)
+    fireEvent.click(screen.getByText(/LOG/i))
+
+    expect(screen.getByText('Logged Lift')).toBeInTheDocument()
+    expect(screen.queryByText('Current Lift')).not.toBeInTheDocument()
+  })
+
   it('logs to localStorage', () => {
     render(<App />)
     clickNavTab('Plan')

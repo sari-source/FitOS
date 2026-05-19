@@ -4,6 +4,7 @@ import { useMacros } from '../hooks/useMacros'
 import { calculateMacros } from '../utils/macroCalc'
 import { cleanExercise, parseDayContent, parsePlan } from '../utils/planParser'
 import { formatDate, getDayName, getDaysInMonth, getFirstDayOfMonth } from '../utils/dateUtils'
+import { getEffectiveStateForDate, shouldFreezeDate } from '../utils/effectiveState'
 import { storage } from '../utils/storage'
 import MacroBar from '../components/shared/MacroBar'
 import MealRow from '../components/shared/MealRow'
@@ -64,6 +65,115 @@ describe('dateUtils', () => {
 
   it('formats dates from strings and pads month/day', () => {
     expect(formatDate('2026-03-04T12:00:00')).toBe('2026-03-04')
+  })
+})
+
+// =====================
+// EFFECTIVE STATE
+// =====================
+describe('effectiveState', () => {
+  const buildPlan = (day, title) => ({
+    [day]: { rest: false, title, exercises: [`${title} Lift`] },
+  })
+
+  it('uses current plan for today until sets are logged', () => {
+    const today = new Date()
+    const day = getDayName(today)
+    const dateStr = formatDate(today)
+    const oldPlan = buildPlan(day, 'Old')
+    const currentPlan = buildPlan(day, 'Current')
+
+    const { effectivePlan } = getEffectiveStateForDate({
+      date: today,
+      plan: currentPlan,
+      macros: null,
+      logs: {},
+      planHistory: [{ date: dateStr, plan: oldPlan, macros: null }],
+      baseline: { plan: oldPlan, macros: null },
+    })
+
+    expect(shouldFreezeDate(today, {})).toBe(false)
+    expect(effectivePlan[day].title).toBe('Current')
+  })
+
+  it('keeps today on the first logged plan after sets are logged', () => {
+    const today = new Date()
+    const day = getDayName(today)
+    const dateStr = formatDate(today)
+    const firstLoggedPlan = buildPlan(day, 'Logged')
+    const laterPlan = buildPlan(day, 'Later')
+    const currentPlan = buildPlan(day, 'Current')
+
+    const { effectivePlan } = getEffectiveStateForDate({
+      date: today,
+      plan: currentPlan,
+      macros: null,
+      logs: { [dateStr]: [{ exercise: 'Logged Lift', sets: 1, reps: 8, weight: 60 }] },
+      planHistory: [
+        { date: dateStr, plan: firstLoggedPlan, macros: null },
+        { date: dateStr, plan: laterPlan, macros: null },
+      ],
+      baseline: { plan: firstLoggedPlan, macros: null },
+    })
+
+    expect(shouldFreezeDate(today, { [dateStr]: [{ exercise: 'Logged Lift' }] })).toBe(true)
+    expect(effectivePlan[day].title).toBe('Logged')
+  })
+
+  it('does not freeze a converted rest day to a snapshot that had the exercise on another day', () => {
+    const today = new Date()
+    const day = getDayName(today)
+    const otherDay = day === 'monday' ? 'tuesday' : 'monday'
+    const dateStr = formatDate(today)
+    const oldPlan = {
+      [day]: { rest: true, title: 'Recovery', exercises: [] },
+      [otherDay]: { rest: false, title: 'Other Push', exercises: ['Bench Press'] },
+    }
+    const currentPlan = {
+      ...oldPlan,
+      [day]: { rest: false, title: 'Converted Push', exercises: ['Bench Press'] },
+    }
+
+    const { effectivePlan } = getEffectiveStateForDate({
+      date: today,
+      plan: currentPlan,
+      macros: null,
+      logs: { [dateStr]: [{ exercise: 'Bench Press', sets: 1, reps: 8, weight: 60 }] },
+      planHistory: [{ date: dateStr, plan: oldPlan, macros: null }],
+      baseline: { plan: oldPlan, macros: null },
+    })
+
+    expect(effectivePlan[day].title).toBe('Converted Push')
+    expect(effectivePlan[day].rest).toBe(false)
+  })
+
+  it('uses the next snapshot for frozen past dates', () => {
+    const today = new Date()
+    const pastDate = new Date(today)
+    pastDate.setDate(today.getDate() - 3)
+    const firstChange = new Date(today)
+    firstChange.setDate(today.getDate() - 2)
+    const secondChange = new Date(today)
+    secondChange.setDate(today.getDate() - 1)
+
+    const day = getDayName(pastDate)
+    const originalPlan = buildPlan(day, 'Original')
+    const middlePlan = buildPlan(day, 'Middle')
+    const currentPlan = buildPlan(day, 'Current')
+
+    const { effectivePlan } = getEffectiveStateForDate({
+      date: pastDate,
+      plan: currentPlan,
+      macros: null,
+      logs: {},
+      planHistory: [
+        { date: formatDate(firstChange), plan: originalPlan, macros: null },
+        { date: formatDate(secondChange), plan: middlePlan, macros: null },
+      ],
+      baseline: { plan: originalPlan, macros: null },
+    })
+
+    expect(effectivePlan[day].title).toBe('Original')
   })
 })
 
